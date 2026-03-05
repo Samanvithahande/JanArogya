@@ -25,48 +25,62 @@
                               ▼
               ┌───────────────────────────┐
               │     📝 REGISTER PAGE      │
-              │  • Enter phone number     │
+              │  • Full Name              │
+              │  • Age / Date of Birth    │
+              │  • Gender                 │
+              │  • Village / District     │
+              │  • State                  │
+              │  • Phone Number           │
+              │  • Email Address          │
+              │  • Password               │
+              │  • Emergency Contact      │
+              │    (name + phone)         │
               │  • Select language        │
               │    (Hindi / Tamil /       │
               │     Telugu / etc.)        │
+              │  • Add family members     │
+              │    (optional)             │
               └───────────────────────────┘
                               │
                               ▼
               ┌───────────────────────────┐
-              │   📱 OTP VERIFICATION     │
-              │  • 6-digit OTP via SMS    │
-              │  • Enter code in app      │
+              │   📧 EMAIL VERIFICATION   │
+              │  • Verification link sent │
+              │    to registered email    │
+              │  • Click link to confirm  │
+              │    account                │
               └───────────────────────────┘
                               │
-                    ┌─────────┴─────────┐
-                    │                   │
-               OTP Valid?          OTP Invalid?
-                    │                   │
-                    ▼                   ▼
-               ✅ Proceed         ┌──────────────┐
-                                  │ ❌ Error Msg  │
-                                  │ Resend OTP   │
-                                  │ (retry)      │
-                                  └──────┬───────┘
-                                         │
-                                    loops back up
+                    ┌─────────┴──────────────┐
+                    │                        │
+             Link Clicked?          Link Not Clicked?
+                    │                        │
+                    ▼                        ▼
+               ✅ Proceed          ┌─────────────────┐
+                                   │ ❌ Email not     │
+                                   │   verified       │
+                                   │ Resend email     │
+                                   │ (retry)          │
+                                   └────────┬─────────┘
+                                            │
+                                       loops back up
 ```
 
 ---
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                   PHASE 2 — PROFILE SETUP                   │
+│                   PHASE 2 — ONBOARDING                      │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
               ┌───────────────────────────┐
-              │     👤 COMPLETE PROFILE   │
-              │  • Name, Age              │
-              │  • Village / District     │
-              │  • Emergency contact      │
-              │  • Add family members     │
-              │    (optional)             │
+              │   ✅ ACCOUNT CONFIRMED    │
+              │  • Email verified         │
+              │  • Profile already filled │
+              │    during registration    │
+              │  • Review & confirm       │
+              │    submitted details      │
               └───────────────────────────┘
                               │
                               ▼
@@ -91,9 +105,10 @@
                               ▼
               ┌───────────────────────────┐
               │       🔐 LOGIN PAGE       │
-              │  • Enter phone number     │
-              │  • OTP sent again         │
-              │  • Confirm & enter app    │
+              │  • Enter email address    │
+              │  • Enter password         │
+              │  • Forgot password?       │
+              │    (reset via email link) │
               └───────────────────────────┘
 ```
 
@@ -209,18 +224,18 @@
 Landing Page
      │
      ▼
-Register (Phone + Language)
+Register (Name, Age, Gender, Village, Email, Password, Phone, Emergency Contact, Language)
      │
      ▼
-OTP Verification ──❌──► Resend OTP ──► (retry)
+Email Verification ──❌──► Resend Email ──► (retry)
      │ ✅
      ▼
-Complete Profile
+Review Confirmed Profile
      │
      ▼
 Voice Tutorial (optional)
      │
-     ▼  ◄──────────────────────────── Returning User: Login via OTP
+     ▼  ◄──────────────────────────── Returning User: Login via Email + Password
      │
      ▼
 Dashboard  [📸 Emergency]  [📋 Records]  [💊 Medicines]  [🔴 SOS]
@@ -249,8 +264,8 @@ ET-AI Triage     Polyglot Scribe        Rx-Vox
 
 | Decision | Yes Path | No Path |
 |---|---|---|
-| OTP Valid? | Proceed to profile setup | Show error, offer resend |
-| New user? | Register → Setup → Dashboard | Login → Dashboard directly |
+| Email Verified? | Proceed to onboarding | Show error, offer resend email |
+| New user? | Register (with profile) → Verify Email → Dashboard | Login (email + password) → Dashboard directly |
 | Severity ≥ 7? | Auto-alert + ambulance prompt | Show self-care steps |
 | Internet available? | Full AI features | Offline mode (critical features) |
 | Literacy level? | Text + voice | Voice-only navigation |
@@ -263,10 +278,10 @@ ET-AI Triage     Polyglot Scribe        Rx-Vox
 Opens App
      │
      ▼
-Login Page (phone number)
+Login Page (email + password)
      │
      ▼
-OTP Sent → Verified
+Credentials Verified
      │
      ▼
 Dashboard → Pick module or check notifications
