@@ -8,8 +8,8 @@ import {
   Activity,
   Languages,
   Volume2,
-  BarChart3,
   FileText,
+  PhoneCall,
   Settings,
   Shield,
   LogOut,
@@ -44,9 +44,8 @@ const mainNav = [
 ]
 
 const secondaryNav = [
-  { title: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-  { title: "Reports", href: "/dashboard/reports", icon: FileText },
-  { title: "Admin", href: "/dashboard/admin", icon: Shield },
+  { title: "History", href: "/dashboard/history", icon: FileText },
+  { title: "Emergency", href: "/dashboard/emergency", icon: PhoneCall },
   { title: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
 
@@ -118,6 +117,8 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        
       </SidebarContent>
 
       <SidebarFooter className="p-2">

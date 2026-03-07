@@ -209,9 +209,11 @@ export default function DashboardPage() {
             <CardTitle className="text-lg text-card-foreground">Recent Activity</CardTitle>
             <CardDescription>Latest consultations and assessments</CardDescription>
           </div>
-          <Button variant="ghost" size="sm" className="text-primary">
-            View All <ArrowRight className="ml-1 size-3" />
-          </Button>
+          <Link href="/dashboard/history">
+            <Button variant="ghost" size="sm" className="text-primary">
+              View All <ArrowRight className="ml-1 size-3" />
+            </Button>
+          </Link>
         </CardHeader>
         <CardContent>
           <Table>
@@ -221,24 +223,22 @@ export default function DashboardPage() {
                 <TableHead className="text-muted-foreground">Type</TableHead>
                 <TableHead className="text-muted-foreground">Patient</TableHead>
                 <TableHead className="text-muted-foreground">Severity</TableHead>
-                <TableHead className="text-muted-foreground">Status</TableHead>
                 <TableHead className="text-right text-muted-foreground">Time</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {recentActivity.map((activity) => (
                 <TableRow key={activity.id} className="border-border/30 hover:bg-secondary/30">
-                  <TableCell className="font-mono text-xs text-foreground">{activity.id}</TableCell>
+                  <TableCell className="font-mono text-xs text-foreground">
+                    <Link href={`/dashboard/history/${activity.id}`} className="underline-offset-2 hover:underline">
+                      {activity.id}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-foreground">{activity.type}</TableCell>
                   <TableCell className="text-muted-foreground">{activity.patient}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={getSeverityColor(activity.severity)}>
                       {activity.severity}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className={getStatusColor(activity.status)}>
-                      {activity.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right text-xs text-muted-foreground">{activity.time}</TableCell>
