@@ -17,11 +17,11 @@ import {
   FileText,
   AlertTriangle,
   ArrowRight,
-  Plus,
-  Mic,
-  Camera,
+  Languages,
+  Volume2,
 } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 
 const stats = [
   {
@@ -133,7 +133,7 @@ export default function DashboardPage() {
       {/* Welcome */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Welcome back, Dr. Rajan
+          Welcome back, Rajan
         </h1>
         <p className="text-muted-foreground">
           {"Here's what's happening at your facility today."}
@@ -169,7 +169,7 @@ export default function DashboardPage() {
         >
           <Link href="/dashboard/trauma">
             <div className="flex size-10 items-center justify-center rounded-xl bg-primary/20">
-              <Plus className="size-5 text-primary" />
+              <Activity className="size-4 text-primary" />
             </div>
             <span className="text-sm font-medium text-foreground">New Trauma Assessment</span>
           </Link>
@@ -182,7 +182,7 @@ export default function DashboardPage() {
         >
           <Link href="/dashboard/scribe">
             <div className="flex size-10 items-center justify-center rounded-xl bg-chart-2/20">
-              <Mic className="size-5 text-chart-2" />
+              <Languages className="size-4 text-chart-2" />
             </div>
             <span className="text-sm font-medium text-foreground">Start Consultation Recording</span>
           </Link>
@@ -195,7 +195,7 @@ export default function DashboardPage() {
         >
           <Link href="/dashboard/rxvox">
             <div className="flex size-10 items-center justify-center rounded-xl bg-chart-3/20">
-              <Camera className="size-5 text-chart-3" />
+              <Volume2 className="size-4 text-chart-3" />
             </div>
             <span className="text-sm font-medium text-foreground">Scan Prescription</span>
           </Link>
