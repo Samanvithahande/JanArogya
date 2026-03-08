@@ -157,6 +157,76 @@ def predict():
             "equipment": []
         })
 
+@app.route("/rxvox", methods=["POST"])
+def rxvox():
+    import os
+    import json
+    import google.generativeai as genai
+
+    try:
+        file = request.files.get("image")
+        if not file:
+            return jsonify({"error": "No image uploaded"}), 400
+
+        filepath = "prescription.jpg"
+        file.save(filepath)
+
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+        model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        model = genai.GenerativeModel(model_name)
+
+        prompt = """
+You are a medical prescription interpreter.
+
+Analyze the prescription image and extract all medicines.
+
+If handwriting is unclear, infer the most probable medicine name from common prescriptions.
+
+Return STRICT JSON only.
+
+Format:
+
+[
+ {
+  "name": "",
+  "dosage": "",
+  "frequency": "",
+  "duration": "",
+  "instructions": ""
+ }
+]
+
+Rules:
+- Detect all medicines
+- Convert handwriting to proper medicine names
+- Normalize frequency like "3 times daily"
+- Normalize dosage like "500mg"
+- Return JSON only
+"""
+
+        try:
+            response = model.generate_content([
+                prompt,
+                {"mime_type": "image/jpeg", "data": open(filepath, "rb").read()}
+            ])
+
+            text = response.text.replace("```json", "").replace("```", "")
+
+            try:
+                medicines = json.loads(text)
+            except Exception:
+                medicines = []
+
+            return jsonify({"medicines": medicines})
+
+        except Exception as e:
+            print("LLM generate_content failed:", e)
+            return jsonify({"error": "LLM generate_content failed", "details": str(e)}), 500
+
+    except Exception as e:
+        print("rxvox handler failed:", e)
+        return jsonify({"error": "server error", "details": str(e)}), 500
 
 # -----------------------
 # Run server

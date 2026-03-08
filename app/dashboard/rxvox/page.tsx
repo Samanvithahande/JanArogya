@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -76,6 +76,25 @@ export default function RxVoxPage() {
   const [medicines, setMedicines] = useState<Medicine[] | null>(null)
   const [language, setLanguage] = useState("hi")
   const [playingIndex, setPlayingIndex] = useState<number | null>(null)
+  const synthRef = useRef<SpeechSynthesis | null>(null)
+  const utterRef = useRef<SpeechSynthesisUtterance | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      synthRef.current = window.speechSynthesis
+    }
+  }, [])
+
+  const languageMap: Record<string, string> = {
+    en: "en-US",
+    hi: "hi-IN",
+    ta: "ta-IN",
+    te: "te-IN",
+    bn: "bn-IN",
+    mr: "mr-IN",
+    gu: "gu-IN",
+    kn: "kn-IN",
+  }
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -96,27 +115,111 @@ export default function RxVoxPage() {
     }
   }, [])
 
-  const handleProcess = () => {
+  const handleProcess = async () => {
+
+    if (!file) return
+
     setProcessing(true)
-    setProgress(0)
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setProcessing(false)
-          setMedicines(mockMedicines)
-          return 100
-        }
-        return prev + 3
+    setProgress(20)
+
+    try {
+
+      const formData = new FormData()
+      formData.append("image", file)
+
+      const res = await fetch(`/api/rxvox`, {
+        method: "POST",
+        body: formData
       })
-    }, 40)
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "")
+        console.error("/api/rxvox returned error:", res.status, text)
+        setProgress(0)
+        return
+      }
+
+      const contentType = res.headers.get("content-type") || ""
+      let data: any = null
+
+      if (contentType.includes("application/json")) {
+        data = await res.json()
+      } else {
+        // Backend sometimes returns HTML error pages or raw text. Try to parse JSON, otherwise bail.
+        const text = await res.text()
+        try {
+          data = JSON.parse(text)
+        } catch (e) {
+          console.error("Unexpected non-JSON response from /api/rxvox:", text)
+          setProgress(0)
+          return
+        }
+      }
+
+      setMedicines(data?.medicines || [])
+      setProgress(100)
+
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const stopSpeech = () => {
+    try {
+      if (synthRef.current) {
+        synthRef.current.cancel()
+      }
+    } catch (e) {
+      console.error("stopSpeech failed", e)
+    }
+    utterRef.current = null
+  }
+
+  const speakText = (text: string, langCode: string) => {
+    if (!synthRef.current) {
+      console.error("SpeechSynthesis not available in this browser")
+      return
+    }
+
+    stopSpeech()
+
+    const utter = new SpeechSynthesisUtterance(text)
+    utter.lang = languageMap[langCode] || langCode
+    utter.onend = () => {
+      setPlayingIndex(null)
+    }
+    utter.onerror = (e) => {
+      console.error("TTS error", e)
+      setPlayingIndex(null)
+    }
+
+    utterRef.current = utter
+    try {
+      synthRef.current.speak(utter)
+    } catch (e) {
+      console.error("speak failed", e)
+      setPlayingIndex(null)
+    }
   }
 
   const togglePlay = (index: number) => {
-    setPlayingIndex(playingIndex === index ? null : index)
-    if (playingIndex !== index) {
-      setTimeout(() => setPlayingIndex(null), 3000)
+    if (!medicines) return
+
+    if (playingIndex === index) {
+      stopSpeech()
+      setPlayingIndex(null)
+      return
     }
+
+    setPlayingIndex(index)
+
+    const med = medicines[index]
+    const textParts = [med.name, med.dosage, med.frequency, med.duration, med.instructions].filter(Boolean)
+    const text = textParts.join('. ')
+
+    speakText(text, language)
   }
 
   const resetAll = () => {
