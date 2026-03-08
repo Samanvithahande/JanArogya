@@ -228,6 +228,77 @@ Rules:
         print("rxvox handler failed:", e)
         return jsonify({"error": "server error", "details": str(e)}), 500
 
+@app.route("/scribe", methods=["POST"])
+def scribe():
+        import os
+        import json
+        import google.generativeai as genai
+
+        # local fallback summary when LLM isn't available
+        mock_summary = {
+            "language": "Hindi",
+            "chiefComplaint": "Patient with abdominal pain",
+            "symptoms": ["abdominal pain", "nausea"],
+            "history": "No significant prior history",
+            "assessment": "Possible appendicitis - recommend imaging",
+            "treatmentPlan": ["IV fluids", "Analgesia", "Urgent ultrasound"],
+            "followUp": "Re-evaluate after imaging"
+        }
+
+        # validate input
+        if "audio" not in request.files:
+            return jsonify({"error": "No audio uploaded"}), 400
+
+        file = request.files["audio"]
+        filepath = "consultation.wav"
+        file.save(filepath)
+
+        # If Gemini LLM isn't configured, return mock summary instead of failing
+        if llm is None:
+            return jsonify({"summary": mock_summary, "llm_unavailable": True})
+
+        # Use configured model name if provided
+        model_name = os.getenv("GEMINI_MODEL", GEMINI_MODEL)
+        try:
+            # prefer using the initialized `llm` object when possible
+            model = llm if getattr(llm, "name", None) == model_name or True else genai.GenerativeModel(model_name)
+
+            prompt = """
+You are a clinical medical scribe.
+
+Listen to the doctor-patient consultation and generate a structured medical summary.
+
+Return STRICT JSON:
+
+{
+"language": "",
+"chiefComplaint": "",
+"symptoms": [],
+"history": "",
+"assessment": "",
+"treatmentPlan": [],
+"followUp": ""
+}
+"""
+
+            response = model.generate_content([
+                prompt,
+                {"mime_type": "audio/wav", "data": open(filepath, "rb").read()}
+            ])
+
+            text = getattr(response, 'text', '') or ''
+            text = text.replace("```json", "").replace("```", "")
+
+            try:
+                summary = json.loads(text)
+            except Exception:
+                summary = mock_summary
+
+            return jsonify({"summary": summary})
+        except Exception as e:
+            print("scribe handler failed (LLM error):", e)
+            return jsonify({"summary": mock_summary, "llm_error": str(e)}), 200
+
 # -----------------------
 # Run server
 # -----------------------

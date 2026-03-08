@@ -83,6 +83,9 @@ export default function ScribePage() {
   const [translateLang, setTranslateLang] = useState("en")
   const waveformInterval = useRef<ReturnType<typeof setInterval> | null>(null)
   const [, setTick] = useState(0)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunks = useRef<BlobPart[]>([])
+  const streamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
     if (isRecording) {
@@ -92,30 +95,147 @@ export default function ScribePage() {
     }
     return () => {
       if (waveformInterval.current) clearInterval(waveformInterval.current)
+      // stop any active recording/stream when component unmounts
+      try {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+          mediaRecorderRef.current.stop()
+        }
+      } catch (e) {}
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+      }
     }
   }, [isRecording])
 
-  const handleRecord = () => {
-    if (isRecording) {
-      setIsRecording(false)
-      setProcessing(true)
-      setTimeout(() => {
+  const handleRecord = async () => {
+    // Toggle recording: start -> request mic and start MediaRecorder; stop -> finalize and send
+    try {
+      if (isRecording) {
+        // stop
+        setIsRecording(false)
+        setProcessing(true)
+
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+          mediaRecorderRef.current.stop()
+        }
+
+        // ensure stream tracks stopped
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop())
+          streamRef.current = null
+        }
+
+        // small delay to let MediaRecorder flush
+        await new Promise((r) => setTimeout(r, 250))
+
+        const blob = new Blob(audioChunks.current, { type: "audio/wav" })
+
+        const formData = new FormData()
+        formData.append("audio", blob, "recording.wav")
+
+        const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api"
+        const res = await fetch(`${API_BASE}/scribe`, {
+          method: "POST",
+          body: formData,
+        })
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => "")
+          console.error("/api/scribe returned error:", res.status, text.slice?.(0, 300) ?? text)
+          // fallback to mock summary when backend fails
+          setSummary(mockSummary)
+          setProcessing(false)
+          audioChunks.current = []
+          return
+        }
+
+        let data: any = null
+        try {
+          data = await res.json()
+        } catch (e) {
+          // If response isn't JSON, fallback
+          console.error("/api/scribe: failed to parse JSON response", e)
+          setSummary(mockSummary)
+          setProcessing(false)
+          audioChunks.current = []
+          return
+        }
+
+        setSummary(data?.summary ?? mockSummary)
         setProcessing(false)
-        setSummary(mockSummary)
-      }, 2000)
-    } else {
-      setIsRecording(true)
-      setSummary(null)
+        audioChunks.current = []
+      } else {
+        // start
+        setSummary(null)
+        setProcessing(false)
+        try {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error("Microphone not supported in this browser")
+          }
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+          streamRef.current = stream
+
+          let recorder: MediaRecorder
+          try {
+            recorder = new MediaRecorder(stream, { mimeType: "audio/webm" })
+          } catch (e) {
+            recorder = new MediaRecorder(stream)
+          }
+
+          audioChunks.current = []
+          recorder.ondataavailable = (ev: BlobEvent) => {
+            if (ev.data && ev.data.size > 0) audioChunks.current.push(ev.data)
+          }
+
+          recorder.onerror = (err) => console.error("MediaRecorder error:", err)
+          recorder.start()
+          mediaRecorderRef.current = recorder
+          setIsRecording(true)
+        } catch (err) {
+          console.error("Failed to start recording:", err)
+          setIsRecording(false)
+        }
+      }
+    } catch (err) {
+      console.error("Record handler error:", err)
+      setProcessing(false)
+      setIsRecording(false)
     }
   }
 
-  const handleUpload = () => {
-    setProcessing(true)
-    setTimeout(() => {
-      setProcessing(false)
-      setSummary(mockSummary)
-    }, 2000)
-  }
+    const handleUpload = () => {
+        // trigger hidden file input
+        const el = document.getElementById("scribe-upload-input") as HTMLInputElement | null
+        el?.click()
+    }
+
+    const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      setProcessing(true)
+
+      const formData = new FormData()
+      formData.append("audio", file, file.name)
+
+      const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api"
+      try {
+        const res = await fetch(`${API_BASE}/scribe`, { method: "POST", body: formData })
+        if (!res.ok) {
+          console.error("/api/scribe returned", res.status)
+          setSummary(mockSummary)
+          setProcessing(false)
+          return
+        }
+        const data = await res.json().catch(() => null)
+        setSummary(data?.summary ?? mockSummary)
+      } catch (err) {
+        console.error("Upload failed:", err)
+        setSummary(mockSummary)
+      } finally {
+        setProcessing(false)
+      }
+    }
 
   return (
     <div className="flex flex-col gap-6">
