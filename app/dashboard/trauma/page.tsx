@@ -144,12 +144,6 @@ const handleAnalyze = useCallback(async () => {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Button variant="ghost" onClick={() => router.back()} className="mb-2 flex items-center gap-2">
-          <ArrowLeft className="size-4" />
-          Back
-        </Button>
-      </div>
-      <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">ET-AI Trauma Triage</h1>
         <p className="text-muted-foreground">Upload injury images for AI-powered severity assessment</p>
       </div>
