@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +14,7 @@ import {
   Loader2,
   Siren,
   Stethoscope,
+  ArrowLeft,
   Package,
   X,
 } from "lucide-react"
@@ -61,6 +63,7 @@ function getSeverityColor(score: number) {
 }
 
 export default function TraumaTriagePage() {
+  const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
@@ -86,21 +89,50 @@ export default function TraumaTriagePage() {
     }
   }, [])
 
-  const handleAnalyze = useCallback(() => {
-    setAnalyzing(true)
-    setProgress(0)
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setAnalyzing(false)
-          setResult(mockResult)
-          return 100
-        }
-        return prev + 2
-      })
-    }, 40)
-  }, [])
+const handleAnalyze = useCallback(async () => {
+  if (!file) return
+
+  setAnalyzing(true)
+  setProgress(20)
+
+  try {
+    const formData = new FormData()
+    formData.append("image", file)
+
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api"
+
+    const res = await fetch(`${API_BASE}/predict`, {
+      method: "POST",
+      body: formData,
+      mode: "cors",
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "")
+      throw new Error(`Server responded ${res.status}: ${text}`)
+    }
+
+    const data = await res.json()
+
+    setProgress(100)
+
+    const mappedResult: AnalysisResult = {
+      severity: data.severity_score,
+      urgency: data.urgency.toLowerCase(),
+      actions: data.actions || [],
+      equipment: data.equipment || [],
+      notes: data.diagnosis || "No diagnosis available"
+    }
+
+    setResult(mappedResult)
+
+  } catch (error) {
+    console.error("Analysis failed:", error)
+  } finally {
+    setAnalyzing(false)
+  }
+
+}, [file])
 
   const resetAll = () => {
     setFile(null)

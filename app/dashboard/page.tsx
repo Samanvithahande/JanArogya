@@ -17,11 +17,11 @@ import {
   FileText,
   AlertTriangle,
   ArrowRight,
-  Plus,
-  Mic,
-  Camera,
+  Languages,
+  Volume2,
 } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 
 const stats = [
   {
@@ -133,7 +133,7 @@ export default function DashboardPage() {
       {/* Welcome */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Welcome back, Dr. Rajan
+          Welcome back, Rajan
         </h1>
         <p className="text-muted-foreground">
           {"Here's what's happening at your facility today."}
@@ -169,7 +169,7 @@ export default function DashboardPage() {
         >
           <Link href="/dashboard/trauma">
             <div className="flex size-10 items-center justify-center rounded-xl bg-primary/20">
-              <Plus className="size-5 text-primary" />
+              <Activity className="size-4 text-primary" />
             </div>
             <span className="text-sm font-medium text-foreground">New Trauma Assessment</span>
           </Link>
@@ -182,7 +182,7 @@ export default function DashboardPage() {
         >
           <Link href="/dashboard/scribe">
             <div className="flex size-10 items-center justify-center rounded-xl bg-chart-2/20">
-              <Mic className="size-5 text-chart-2" />
+              <Languages className="size-4 text-chart-2" />
             </div>
             <span className="text-sm font-medium text-foreground">Start Consultation Recording</span>
           </Link>
@@ -195,7 +195,7 @@ export default function DashboardPage() {
         >
           <Link href="/dashboard/rxvox">
             <div className="flex size-10 items-center justify-center rounded-xl bg-chart-3/20">
-              <Camera className="size-5 text-chart-3" />
+              <Volume2 className="size-4 text-chart-3" />
             </div>
             <span className="text-sm font-medium text-foreground">Scan Prescription</span>
           </Link>
@@ -209,9 +209,11 @@ export default function DashboardPage() {
             <CardTitle className="text-lg text-card-foreground">Recent Activity</CardTitle>
             <CardDescription>Latest consultations and assessments</CardDescription>
           </div>
-          <Button variant="ghost" size="sm" className="text-primary">
-            View All <ArrowRight className="ml-1 size-3" />
-          </Button>
+          <Link href="/dashboard/history">
+            <Button variant="ghost" size="sm" className="text-primary">
+              View All <ArrowRight className="ml-1 size-3" />
+            </Button>
+          </Link>
         </CardHeader>
         <CardContent>
           <Table>
@@ -221,24 +223,22 @@ export default function DashboardPage() {
                 <TableHead className="text-muted-foreground">Type</TableHead>
                 <TableHead className="text-muted-foreground">Patient</TableHead>
                 <TableHead className="text-muted-foreground">Severity</TableHead>
-                <TableHead className="text-muted-foreground">Status</TableHead>
                 <TableHead className="text-right text-muted-foreground">Time</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {recentActivity.map((activity) => (
                 <TableRow key={activity.id} className="border-border/30 hover:bg-secondary/30">
-                  <TableCell className="font-mono text-xs text-foreground">{activity.id}</TableCell>
+                  <TableCell className="font-mono text-xs text-foreground">
+                    <Link href={`/dashboard/history/${activity.id}`} className="underline-offset-2 hover:underline">
+                      {activity.id}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-foreground">{activity.type}</TableCell>
                   <TableCell className="text-muted-foreground">{activity.patient}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={getSeverityColor(activity.severity)}>
                       {activity.severity}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className={getStatusColor(activity.status)}>
-                      {activity.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right text-xs text-muted-foreground">{activity.time}</TableCell>
