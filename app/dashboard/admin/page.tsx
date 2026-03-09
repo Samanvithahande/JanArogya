@@ -32,11 +32,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 const users = [
-  { name: "Dr. Rajan Kumar", email: "rajan@health.org", role: "Healthcare Worker", facility: "PHC Varanasi", status: "Active", lastLogin: "2 hrs ago" },
-  { name: "Dr. Priya Sharma", email: "priya@health.org", role: "Healthcare Worker", facility: "CHC Lucknow", status: "Active", lastLogin: "5 hrs ago" },
+  { name: "Rajan Kumar", email: "rajan@health.org", role: "Healthcare Worker", facility: "PHC Varanasi", status: "Active", lastLogin: "2 hrs ago" },
+  { name: "Priya Sharma", email: "priya@health.org", role: "Healthcare Worker", facility: "CHC Lucknow", status: "Active", lastLogin: "5 hrs ago" },
   { name: "Admin Suresh", email: "suresh@health.org", role: "Admin", facility: "District Hospital", status: "Active", lastLogin: "1 day ago" },
-  { name: "Dr. Anita Roy", email: "anita@health.org", role: "Healthcare Worker", facility: "PHC Patna", status: "Inactive", lastLogin: "5 days ago" },
-  { name: "Dr. Mohan Das", email: "mohan@health.org", role: "Healthcare Worker", facility: "CHC Jaipur", status: "Active", lastLogin: "12 hrs ago" },
+  { name: "Anita Roy", email: "anita@health.org", role: "Healthcare Worker", facility: "PHC Patna", status: "Inactive", lastLogin: "5 days ago" },
+  { name: "Mohan Das", email: "mohan@health.org", role: "Healthcare Worker", facility: "CHC Jaipur", status: "Active", lastLogin: "12 hrs ago" },
   { name: "Admin Lakshmi", email: "lakshmi@health.org", role: "Admin", facility: "State Office", status: "Active", lastLogin: "3 hrs ago" },
 ]
 
@@ -48,13 +48,13 @@ const facilities = [
 ]
 
 const activityLogs = [
-  { user: "Dr. Rajan", action: "Submitted trauma assessment", module: "Trauma Triage", time: "12 min ago" },
-  { user: "Dr. Priya", action: "Transcribed consultation", module: "Polyglot Scribe", time: "34 min ago" },
+  { user: "Rajan", action: "Submitted trauma assessment", module: "Trauma Triage", time: "12 min ago" },
+  { user: "Priya", action: "Transcribed consultation", module: "Polyglot Scribe", time: "34 min ago" },
   { user: "Admin Suresh", action: "Generated monthly report", module: "Reports", time: "1 hr ago" },
-  { user: "Dr. Mohan", action: "Scanned prescription", module: "Rx-Vox", time: "2 hrs ago" },
-  { user: "Dr. Anita", action: "Flagged emergency case", module: "Trauma Triage", time: "3 hrs ago" },
+  { user: "Mohan", action: "Scanned prescription", module: "Rx-Vox", time: "2 hrs ago" },
+  { user: "Anita", action: "Flagged emergency case", module: "Trauma Triage", time: "3 hrs ago" },
   { user: "Admin Lakshmi", action: "Added new facility", module: "Admin", time: "5 hrs ago" },
-  { user: "Dr. Rajan", action: "Exported scribe summary", module: "Polyglot Scribe", time: "6 hrs ago" },
+  { user: "Rajan", action: "Exported scribe summary", module: "Polyglot Scribe", time: "6 hrs ago" },
 ]
 
 export default function AdminPage() {

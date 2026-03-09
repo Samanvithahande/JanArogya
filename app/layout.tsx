@@ -11,27 +11,14 @@ export const metadata: Metadata = {
   title: 'JanArogya - Right Care. Right Now.',
   description: 'AI-Powered Rural Healthcare Assistance Platform - Trauma Triage, Multilingual Scribe, and Prescription Voice Support',
   generator: 'v0.app',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+   icons: {
+    icon: '/favicon.ico',
   },
+  
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0d9488',
+  themeColor: '#2563eb',
   width: 'device-width',
   initialScale: 1,
 }
@@ -43,10 +30,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans antialiased">
+      <body   suppressHydrationWarning
+  className="font-sans antialiased bg-gradient-to-b from-white to-[#f0f7ff]"
+>
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
