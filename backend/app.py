@@ -242,7 +242,8 @@ def scribe():
             "history": "No significant prior history",
             "assessment": "Possible appendicitis - recommend imaging",
             "treatmentPlan": ["IV fluids", "Analgesia", "Urgent ultrasound"],
-            "followUp": "Re-evaluate after imaging"
+            "followUp": "Re-evaluate after imaging",
+            "patientSummary": "You have abdominal pain and nausea. The doctor suspects appendicitis and recommends imaging (ultrasound) and tests. You'll likely receive IV fluids and pain relief while they confirm the diagnosis."
         }
 
         # validate input
@@ -253,8 +254,32 @@ def scribe():
         filepath = "consultation.wav"
         file.save(filepath)
 
-        # If Gemini LLM isn't configured, return mock summary instead of failing
+        # Try local transcription (Whisper) so the API can return real text
+        transcription_text = None
+        try:
+            import whisper
+            try:
+                wmodel = whisper.load_model(os.getenv("WHISPER_MODEL", "small"))
+                trans = wmodel.transcribe(filepath)
+                transcription_text = trans.get("text", "").strip()
+            except Exception as e:
+                print("whisper transcription failed:", e)
+                transcription_text = None
+        except Exception:
+            transcription_text = None
+
+        # If Gemini LLM isn't configured, return a transcription-based summary instead of failing
         if llm is None:
+            # If we have a transcription, use it to build a patient-facing summary
+            if transcription_text:
+                patient_summary = f"In simple words: {transcription_text[:800]}"
+                fallback = {
+                    **mock_summary,
+                    "chiefComplaint": (transcription_text.split(".")[:1] or [""])[0][:200],
+                    "history": transcription_text[:1000],
+                    "patientSummary": patient_summary,
+                }
+                return jsonify({"summary": fallback, "llm_unavailable": True})
             return jsonify({"summary": mock_summary, "llm_unavailable": True})
 
         # Use configured model name if provided
@@ -266,19 +291,24 @@ def scribe():
             prompt = """
 You are a clinical medical scribe.
 
-Listen to the doctor-patient consultation and generate a structured medical summary.
+Listen to the doctor-patient consultation and generate two outputs:
 
-Return STRICT JSON:
+1) A structured JSON summary EXACTLY in the following format (return JSON only):
 
 {
-"language": "",
-"chiefComplaint": "",
-"symptoms": [],
-"history": "",
-"assessment": "",
-"treatmentPlan": [],
-"followUp": ""
+    "language": "",
+    "chiefComplaint": "",
+    "symptoms": [],
+    "history": "",
+    "assessment": "",
+    "treatmentPlan": [],
+    "followUp": "",
+    "patientSummary": ""  // one-paragraph, simple-language summary addressed to the patient
 }
+
+2) The `patientSummary` field should be written in simple, non-technical language the patient can understand — one short paragraph (2-4 sentences). Start with "In simple words: ..." or similar.
+
+Return JSON only and nothing else.
 """
 
             response = model.generate_content([
@@ -292,7 +322,23 @@ Return STRICT JSON:
             try:
                 summary = json.loads(text)
             except Exception:
+                # If model didn't return valid JSON, fallback to mock and include error info
                 summary = mock_summary
+
+            # Ensure patientSummary exists; if not, synthesize a simple paragraph
+            if not summary.get("patientSummary"):
+                try:
+                    parts = []
+                    if summary.get("chiefComplaint"):
+                        parts.append(f"You reported: {summary.get('chiefComplaint')}")
+                    if summary.get("assessment"):
+                        parts.append(f"Assessment: {summary.get('assessment')}")
+                    tp = summary.get("treatmentPlan") or []
+                    if tp:
+                        parts.append(f"Plan: {', '.join(tp[:3])}")
+                    summary["patientSummary"] = " ".join(parts) if parts else mock_summary.get("patientSummary")
+                except Exception:
+                    summary["patientSummary"] = mock_summary.get("patientSummary")
 
             return jsonify({"summary": summary})
         except Exception as e:

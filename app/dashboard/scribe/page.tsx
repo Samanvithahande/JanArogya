@@ -28,6 +28,7 @@ type MedicalSummary = {
   assessment: string
   treatmentPlan: string[]
   followUp: string
+  patientSummary?: string
 }
 
 const mockSummary: MedicalSummary = {
@@ -86,6 +87,7 @@ export default function ScribePage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunks = useRef<BlobPart[]>([])
   const streamRef = useRef<MediaStream | null>(null)
+  const lastMimeRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (isRecording) {
@@ -129,10 +131,12 @@ export default function ScribePage() {
         // small delay to let MediaRecorder flush
         await new Promise((r) => setTimeout(r, 250))
 
-        const blob = new Blob(audioChunks.current, { type: "audio/wav" })
+        const mime = lastMimeRef.current || (mediaRecorderRef.current && (mediaRecorderRef.current as any).mimeType) || "audio/webm"
+        const ext = mime.includes("webm") ? "webm" : mime.includes("wav") ? "wav" : "dat"
+        const blob = new Blob(audioChunks.current, { type: mime })
 
         const formData = new FormData()
-        formData.append("audio", blob, "recording.wav")
+        formData.append("audio", blob, `recording.${ext}`)
 
         const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api"
         const res = await fetch(`${API_BASE}/scribe`, {
@@ -141,8 +145,14 @@ export default function ScribePage() {
         })
 
         if (!res.ok) {
-          const text = await res.text().catch(() => "")
-          console.error("/api/scribe returned error:", res.status, text.slice?.(0, 300) ?? text)
+          let text = ""
+          try {
+            text = await res.text()
+          } catch (e) {
+            text = ""
+          }
+          const snippet = typeof text === "string" && text.length ? text.slice(0, 300) : String(text)
+          console.error("/api/scribe returned error:", res.status, snippet)
           // fallback to mock summary when backend fails
           setSummary(mockSummary)
           setProcessing(false)
@@ -177,15 +187,25 @@ export default function ScribePage() {
           streamRef.current = stream
 
           let recorder: MediaRecorder
+
           try {
-            recorder = new MediaRecorder(stream, { mimeType: "audio/webm" })
+            recorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" })
           } catch (e) {
-            recorder = new MediaRecorder(stream)
+            try {
+              recorder = new MediaRecorder(stream, { mimeType: "audio/webm" })
+            } catch (e2) {
+              recorder = new MediaRecorder(stream)
+            }
           }
 
           audioChunks.current = []
+          lastMimeRef.current = (recorder as any).mimeType || null
           recorder.ondataavailable = (ev: BlobEvent) => {
             if (ev.data && ev.data.size > 0) audioChunks.current.push(ev.data)
+            // keep last known mime
+            try {
+              lastMimeRef.current = (recorder as any).mimeType || lastMimeRef.current
+            } catch (e) {}
           }
 
           recorder.onerror = (err) => console.error("MediaRecorder error:", err)
@@ -333,6 +353,18 @@ export default function ScribePage() {
                 </Button>
               </div>
             </div>
+
+            {/* Patient-friendly summary */}
+            {summary.patientSummary && (
+              <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
+                <CardContent className="flex items-start gap-3 p-4">
+                  <div>
+                    <span className="text-xs font-medium text-muted-foreground">In simple words</span>
+                    <p className="mt-1 text-sm leading-relaxed text-foreground">{summary.patientSummary}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Chief Complaint */}
             <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
