@@ -7,26 +7,26 @@ import { Activity, AudioLines, BrainCircuit, ChevronRight, Languages, ShieldChec
 const flowSteps = [
   {
     title: "Capture",
-    description: "Upload wound photos or prescription notes in seconds using guided prompts.",
+    description: "Upload injury photos or medicine slips in seconds using simple guided prompts.",
     icon: <Activity className="size-5" />,
   },
   {
     title: "Understand",
-    description: "AI detects severity, language context, and medical entities for cleaner decision support.",
+    description: "AI explains risk level, language context, and key medicine details in easy words.",
     icon: <BrainCircuit className="size-5" />,
   },
   {
     title: "Act",
-    description: "Get structured care steps, multilingual summaries, and patient-friendly voice output.",
+    description: "Get practical next steps, multilingual summaries, and easy voice guidance.",
     icon: <AudioLines className="size-5" />,
   },
 ]
 
 const impactStats = [
-  { value: "92%", label: "faster first triage response" },
+  { value: "92%", label: "faster first safety response" },
   { value: "16+", label: "Indian language support" },
   { value: "24/7", label: "field-ready assistance" },
-  { value: "10k+", label: "consultations supported" },
+  { value: "10k+", label: "rural users supported" },
 ]
 
 export function CareFlowSection() {
@@ -36,10 +36,10 @@ export function CareFlowSection() {
         <div className="mb-10 flex flex-col gap-4 md:max-w-2xl">
           <Badge className="w-fit border-0 bg-primary/15 px-3 py-1 text-primary">Smart Care Flow</Badge>
           <h2 className="font-display text-3xl leading-tight text-foreground md:text-5xl">
-            From village clinic chaos to calm, guided care in one workflow.
+            From confusion to clarity, guided health support in one workflow.
           </h2>
           <p className="text-base text-muted-foreground md:text-lg">
-            JanArogya is designed for real field conditions: poor connectivity, multiple dialects, and urgent decisions.
+            JanArogya is built for real rural life: patchy internet, many dialects, and urgent personal decisions.
           </p>
         </div>
 
@@ -73,9 +73,9 @@ export function ImpactSection() {
           <CardContent className="grid gap-6 p-6 md:grid-cols-2">
             <div className="space-y-4">
               <Badge className="w-fit border-0 bg-emerald-500/15 text-emerald-400">Trusted In The Field</Badge>
-              <h3 className="font-display text-3xl text-foreground md:text-4xl">Built for frontline teams and people first outcomes.</h3>
+              <h3 className="font-display text-3xl text-foreground md:text-4xl">Built for rural people and everyday personal health confidence.</h3>
               <p className="text-muted-foreground">
-                We combine trauma triage, voice prescriptions, and multilingual medical notes in one lightweight experience.
+                We combine injury support, medicine voice guidance, and multilingual health notes in one lightweight experience.
               </p>
             </div>
 
@@ -92,35 +92,35 @@ export function ImpactSection() {
 
         <Card className="landing-glass border-primary/20">
           <CardHeader>
-            <CardTitle className="font-display text-2xl">Why Health Workers Love It</CardTitle>
+            <CardTitle className="font-display text-2xl">Why Rural Users Love It</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-card/65 p-4">
               <ShieldCheck className="mt-0.5 size-5 text-emerald-400" />
               <div>
                 <p className="font-medium text-foreground">Safer Decisions</p>
-                <p className="text-sm text-muted-foreground">Severity hints and emergency flags reduce missed critical cases.</p>
+                <p className="text-sm text-muted-foreground">Risk hints and emergency flags help you act faster in dangerous moments.</p>
               </div>
             </div>
             <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-card/65 p-4">
               <Languages className="mt-0.5 size-5 text-primary" />
               <div>
                 <p className="font-medium text-foreground">Language Comfort</p>
-                <p className="text-sm text-muted-foreground">Patients hear medicine instructions in familiar language and tone.</p>
+                <p className="text-sm text-muted-foreground">People hear medicine instructions in familiar language and tone.</p>
               </div>
             </div>
             <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-card/65 p-4">
               <Waves className="mt-0.5 size-5 text-chart-3" />
               <div>
-                <p className="font-medium text-foreground">Faster Handoffs</p>
-                <p className="text-sm text-muted-foreground">Structured summaries make referrals cleaner between rural and urban centers.</p>
+                <p className="font-medium text-foreground">Faster Help-Seeking</p>
+                <p className="text-sm text-muted-foreground">Clear summaries make it easier to explain the case when reaching support centers.</p>
               </div>
             </div>
             <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-card/65 p-4">
               <Stethoscope className="mt-0.5 size-5 text-warning" />
               <div>
-                <p className="font-medium text-foreground">Less Admin Overload</p>
-                <p className="text-sm text-muted-foreground">Field staff spend less time typing and more time treating patients.</p>
+                <p className="font-medium text-foreground">Less Confusion</p>
+                <p className="text-sm text-muted-foreground">You spend less time guessing and more time taking the right next step.</p>
               </div>
             </div>
           </CardContent>

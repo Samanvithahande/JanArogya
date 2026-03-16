@@ -71,8 +71,8 @@ function FeatureCard({ title, description, icon, badge, badgeColor, details, ind
 
 const features = [
   {
-    title: "ET-AI Trauma Triage",
-    description: "Rapid image-based trauma assessment with urgency flags and actionable next-step care guidance.",
+    title: "Injury Safety Check",
+    description: "Quickly check injury seriousness from a photo and see clear next steps.",
     icon: <Activity className="size-6" />,
     badge: "Critical",
     badgeColor: "bg-destructive/15 text-red-300 border-destructive/30",
@@ -84,8 +84,8 @@ const features = [
     ],
   },
   {
-    title: "Polyglot Scribe",
-    description: "Understands speech across languages and converts conversation into clean clinical summaries.",
+    title: "Language Note Helper",
+    description: "Converts spoken health details into simple notes across multiple Indian languages.",
     icon: <Languages className="size-6" />,
     badge: "AI Powered",
     badgeColor: "bg-primary/15 text-primary border-primary/30",
@@ -97,8 +97,8 @@ const features = [
     ],
   },
   {
-    title: "Rx-Vox",
-    description: "Turns prescriptions into clear, spoken medicine instructions for better patient adherence.",
+    title: "Rx Voice Guide",
+    description: "Reads medicine instructions aloud so you can follow dosage clearly at home.",
     icon: <Volume2 className="size-6" />,
     badge: "Voice",
     badgeColor: "bg-emerald-500/15 text-emerald-300 border-emerald-400/30",
@@ -123,7 +123,7 @@ export function FeaturesSection() {
             Three brilliant modules. One seamless care experience.
           </h2>
           <p className="mt-4 text-muted-foreground text-pretty">
-            Crafted for speed, empathy, and accuracy so your team can make better decisions with less effort.
+            Crafted for rural users with clear language, fast guidance, and people-first design.
           </p>
         </div>
 
@@ -135,7 +135,7 @@ export function FeaturesSection() {
 
         <div className="mx-auto mt-8 flex max-w-3xl items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-center text-sm text-primary">
           <ShieldPlus className="size-4 shrink-0" />
-          Clinically assistive AI only. Final diagnosis and treatment remain with trained medical professionals.
+          Guidance support only. For danger signs or severe symptoms, contact emergency services immediately.
         </div>
       </div>
     </section>

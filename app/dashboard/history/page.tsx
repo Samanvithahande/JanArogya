@@ -15,10 +15,10 @@ import {
 import { FileText, ArrowRight } from "lucide-react"
 
 const history = [
-  { id: "HIS-1001", title: "Trauma Assessment - Patient #4521", type: "Trauma", date: "Mar 06, 2026" },
-  { id: "HIS-1002", title: "Scribe Notes - Patient #8832", type: "Scribe", date: "Mar 05, 2026" },
-  { id: "HIS-1003", title: "Prescription Scan - Patient #1209", type: "Rx-Vox", date: "Mar 04, 2026" },
-  { id: "HIS-1004", title: "Trauma Assessment - Patient #7723", type: "Trauma", date: "Mar 03, 2026" },
+  { id: "HIS-1001", title: "Injury Safety Check - Entry #4521", type: "Injury", date: "Mar 06, 2026" },
+  { id: "HIS-1002", title: "Health Notes - Entry #8832", type: "Notes", date: "Mar 05, 2026" },
+  { id: "HIS-1003", title: "Medicine Slip Scan - Entry #1209", type: "Rx Voice", date: "Mar 04, 2026" },
+  { id: "HIS-1004", title: "Injury Safety Check - Entry #7723", type: "Injury", date: "Mar 03, 2026" },
 ]
 
 export default function HistoryPage() {
@@ -27,7 +27,7 @@ export default function HistoryPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">History</h1>
-          <p className="text-muted-foreground">View recent assessments, consultations and scans</p>
+          <p className="text-muted-foreground">View your recent checks, voice notes, and medicine scans</p>
         </div>
         <Button variant="ghost" size="sm">
           View Archive <ArrowRight className="ml-1 size-3" />

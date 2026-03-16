@@ -13,8 +13,8 @@ const contacts = {
   ],
   hospitals: [
     { name: "District Hospital", phone: "+91-98765-43210" },
-    { name: "City General Hospital", phone: "+91-91234-56780" },
-    { name: "Trauma Centre", phone: "+91-90000-11223" },
+    { name: "Taluk Government Hospital", phone: "+91-91234-56780" },
+    { name: "Nearest Emergency Center", phone: "+91-90000-11223" },
   ],
   poisonControl: [
     { name: "National Poison Control", phone: "+91-80000-12345" },
@@ -30,8 +30,8 @@ export default function EmergencyContactsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Emergency Contacts</h1>
-        <p className="text-muted-foreground">Quick access to all critical contact numbers and helplines.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Emergency Help Contacts</h1>
+        <p className="text-muted-foreground">Quick access to urgent phone numbers for your personal emergencies.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -61,7 +61,7 @@ export default function EmergencyContactsPage() {
         <Card className="border-border/50 bg-card/60">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><MapPin className="size-4" /> Nearby Hospitals</CardTitle>
-            <CardDescription>Local hospitals and trauma centres</CardDescription>
+            <CardDescription>Nearby hospitals and emergency centers</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3">

@@ -14,20 +14,20 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Settings</h1>
-        <p className="text-muted-foreground">Manage your account and preferences</p>
+        <p className="text-muted-foreground">Manage your profile, language, and personal preferences</p>
       </div>
 
       {/* Profile */}
       <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-card-foreground">Profile</CardTitle>
-          <CardDescription>Update your personal information</CardDescription>
+          <CardDescription>Update your personal details</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <Label>First Name</Label>
-              <Input defaultValue="Dr. Rajan" className="bg-secondary/30" />
+              <Input defaultValue="Rajan" className="bg-secondary/30" />
             </div>
             <div className="flex flex-col gap-2">
               <Label>Last Name</Label>
@@ -36,11 +36,11 @@ export default function SettingsPage() {
           </div>
           <div className="flex flex-col gap-2">
             <Label>Email</Label>
-            <Input defaultValue="rajan.kumar@health.org" className="bg-secondary/30" />
+            <Input defaultValue="rajan.kumar@example.com" className="bg-secondary/30" />
           </div>
           <div className="flex flex-col gap-2">
-            <Label>Facility</Label>
-            <Input defaultValue="Primary Health Center, Varanasi" className="bg-secondary/30" />
+            <Label>Your Area</Label>
+            <Input defaultValue="Varanasi Rural" className="bg-secondary/30" />
           </div>
         </CardContent>
       </Card>
@@ -55,7 +55,7 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-foreground">Default Language</p>
-              <p className="text-xs text-muted-foreground">Preferred language for scribe and Rx-Vox</p>
+              <p className="text-xs text-muted-foreground">Preferred language for notes and medicine voice</p>
             </div>
             <Select defaultValue="hi">
               <SelectTrigger className="w-40 bg-secondary/30">
@@ -75,7 +75,7 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-foreground">Emergency Alerts</p>
-              <p className="text-xs text-muted-foreground">Get notified for critical trauma cases</p>
+              <p className="text-xs text-muted-foreground">Get notified for urgent injury warnings</p>
             </div>
             <Switch defaultChecked />
           </div>
@@ -85,7 +85,7 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-foreground">Auto-translate Summaries</p>
-              <p className="text-xs text-muted-foreground">Automatically translate to preferred language</p>
+              <p className="text-xs text-muted-foreground">Automatically translate summaries to your language</p>
             </div>
             <Switch defaultChecked />
           </div>
@@ -95,7 +95,7 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-foreground">Audio Auto-play</p>
-              <p className="text-xs text-muted-foreground">Auto-play audio instructions in Rx-Vox</p>
+              <p className="text-xs text-muted-foreground">Auto-play medicine audio instructions</p>
             </div>
             <Switch />
           </div>

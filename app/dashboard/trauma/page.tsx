@@ -44,7 +44,7 @@ const mockResult: AnalysisResult = {
     "Pulse oximeter",
     "IV access kit",
   ],
-  notes: "Suspected compound fracture with moderate hemorrhage. Patient requires urgent transfer to nearest district hospital for imaging and surgical consultation.",
+  notes: "Possible bone injury with active bleeding. Keep the limb stable and move to the nearest emergency center quickly.",
 }
 
 function getUrgencyColor(urgency: string) {
@@ -144,8 +144,8 @@ const handleAnalyze = useCallback(async () => {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">ET-AI Trauma Triage</h1>
-        <p className="text-muted-foreground">Upload injury images for AI-powered severity assessment</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Injury Safety Check</h1>
+        <p className="text-muted-foreground">Upload an injury image to get quick risk guidance</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -153,7 +153,7 @@ const handleAnalyze = useCallback(async () => {
         <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-card-foreground">Image Upload</CardTitle>
-            <CardDescription>Drag and drop or select an injury image for analysis</CardDescription>
+            <CardDescription>Drag and drop or select an injury image for a safety check</CardDescription>
           </CardHeader>
           <CardContent>
             {!preview ? (
@@ -202,7 +202,7 @@ const handleAnalyze = useCallback(async () => {
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-sm text-primary">
                       <Loader2 className="size-4 animate-spin" />
-                      Analyzing injury...
+                      Checking injury risk...
                     </div>
                     <Progress value={progress} className="h-2" />
                   </div>
@@ -212,7 +212,7 @@ const handleAnalyze = useCallback(async () => {
                     className="bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     <Stethoscope className="mr-2 size-4" />
-                    Analyze Injury
+                    Check Injury
                   </Button>
                 ) : null}
               </div>
@@ -244,7 +244,7 @@ const handleAnalyze = useCallback(async () => {
                 <div className="flex flex-col gap-2">
                   <span className="text-sm text-muted-foreground">Severity Score</span>
                   <Badge className={`w-fit text-sm ${getUrgencyColor(result.urgency)}`}>
-                    {result.urgency.toUpperCase()} URGENCY
+                    {result.urgency.toUpperCase()} RISK
                   </Badge>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                     {result.notes}
@@ -258,7 +258,7 @@ const handleAnalyze = useCallback(async () => {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base text-card-foreground">
                   <CheckCircle2 className="size-4 text-primary" />
-                  Immediate Action Steps
+                  Immediate Safety Steps
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -280,7 +280,7 @@ const handleAnalyze = useCallback(async () => {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base text-card-foreground">
                   <Package className="size-4 text-chart-3" />
-                  Recommended Equipment
+                  Helpful Items
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -297,7 +297,7 @@ const handleAnalyze = useCallback(async () => {
             {/* Emergency */}
             <Button variant="destructive" size="lg" className="w-full">
               <Siren className="mr-2 size-5" />
-              Flag Emergency
+              Call Emergency Help
             </Button>
           </div>
         ) : (
@@ -306,7 +306,7 @@ const handleAnalyze = useCallback(async () => {
               <div className="flex size-16 items-center justify-center rounded-2xl bg-secondary/50">
                 <Stethoscope className="size-7 text-muted-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground">Upload an image and run analysis to see results here</p>
+              <p className="text-sm text-muted-foreground">Upload an image and run safety check to see guidance here</p>
             </div>
           </Card>
         )}

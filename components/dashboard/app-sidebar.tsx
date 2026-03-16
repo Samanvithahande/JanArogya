@@ -11,9 +11,9 @@ import {
   FileText,
   PhoneCall,
   Settings,
-  Shield,
   LogOut,
   ChevronDown,
+  Sparkles,
 } from "lucide-react"
 import {
   Sidebar,
@@ -38,9 +38,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const mainNav = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Trauma Triage", href: "/dashboard/trauma", icon: Activity },
-  { title: "Polyglot Scribe", href: "/dashboard/scribe", icon: Languages },
-  { title: "Rx-Vox", href: "/dashboard/rxvox", icon: Volume2 },
+  { title: "Injury Check", href: "/dashboard/trauma", icon: Activity },
+  { title: "Health Notes", href: "/dashboard/scribe", icon: Languages },
+  { title: "Medicine Voice", href: "/dashboard/rxvox", icon: Volume2 },
 ]
 
 const secondaryNav = [
@@ -53,7 +53,7 @@ export function AppSidebar() {
   const pathname = usePathname()
 
   return (
-    <Sidebar collapsible="icon" className="border-sidebar-border">
+    <Sidebar collapsible="icon" className="border-sidebar-border/60 bg-sidebar/85 backdrop-blur-xl">
       <SidebarHeader className="p-4">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Image
@@ -71,11 +71,19 @@ export function AppSidebar() {
             className="hidden size-8 object-contain group-data-[collapsible=icon]:block"
           />
         </Link>
+
+        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/10 p-3 group-data-[collapsible=icon]:hidden">
+          <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-primary">
+            <Sparkles className="size-3.5" />
+            Shift Pulse
+          </div>
+          <p className="text-xs text-sidebar-foreground/80">Entries today: 46 | Urgent queue: 1</p>
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
+          <SidebarGroupLabel>Personal Health Tools</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNav.map((item) => (
@@ -84,6 +92,7 @@ export function AppSidebar() {
                     asChild
                     isActive={pathname === item.href}
                     tooltip={item.title}
+                    className="h-10 rounded-xl"
                   >
                     <Link href={item.href}>
                       <item.icon className="size-4" />
@@ -97,7 +106,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Management</SidebarGroupLabel>
+          <SidebarGroupLabel>Operations</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {secondaryNav.map((item) => (
@@ -106,6 +115,7 @@ export function AppSidebar() {
                     asChild
                     isActive={pathname === item.href}
                     tooltip={item.title}
+                    className="h-10 rounded-xl"
                   >
                     <Link href={item.href}>
                       <item.icon className="size-4" />
@@ -126,13 +136,13 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton size="lg">
+                <SidebarMenuButton size="lg" className="rounded-xl border border-border/50 bg-card/60">
                   <Avatar className="size-8">
-                    <AvatarFallback className="bg-primary/20 text-primary text-xs">DR</AvatarFallback>
+                    <AvatarFallback className="bg-primary/20 text-primary text-xs">RK</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col text-left text-xs">
-                    <span className="font-medium text-sidebar-foreground">Dr. Rajan</span>
-                    <span className="text-sidebar-foreground/60">Healthcare Worker</span>
+                    <span className="font-medium text-sidebar-foreground">Rajan Kumar</span>
+                    <span className="text-sidebar-foreground/60">Personal Account</span>
                   </div>
                   <ChevronDown className="ml-auto size-4" />
                 </SidebarMenuButton>

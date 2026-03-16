@@ -10,7 +10,7 @@ const _geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono
 
 export const metadata: Metadata = {
   title: 'JanArogya - Right Care. Right Now.',
-  description: 'AI-Powered Rural Healthcare Assistance Platform - Trauma Triage, Multilingual Scribe, and Prescription Voice Support',
+  description: 'AI-powered personal health guidance for rural users - injury support, medicine voice help, and multilingual health notes.',
   generator: 'v0.app',
    icons: {
     icon: '/favicon.ico',

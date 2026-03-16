@@ -10,14 +10,18 @@ export default function DashboardLayout({
 }) {
   return (
     <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <DashboardHeader />
-        <div className="flex-1 overflow-auto p-4 md:p-6">
-          <BackButton className="mb-4" />
-          {children}
-        </div>
-      </SidebarInset>
+      <div className="dashboard-page flex min-h-screen w-full">
+        <AppSidebar />
+        <SidebarInset className="bg-transparent">
+          <DashboardHeader />
+          <div className="flex-1 overflow-auto px-4 pb-6 pt-4 md:px-6 md:pb-8 md:pt-5">
+            <div className="mx-auto max-w-[1200px]">
+              <BackButton className="mb-4" />
+              {children}
+            </div>
+          </div>
+        </SidebarInset>
+      </div>
     </SidebarProvider>
   )
 }

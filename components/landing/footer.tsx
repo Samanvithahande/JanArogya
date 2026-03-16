@@ -11,7 +11,7 @@ export function Footer() {
           <div className="max-w-xl">
             <p className="text-sm uppercase tracking-[0.15em] text-primary">Build Better Care Access</p>
             <h3 className="font-display mt-2 text-3xl leading-tight text-foreground md:text-4xl">
-              Equip every frontline worker with AI that feels human.
+              Bring trusted health guidance to every rural person.
             </h3>
           </div>
           <Button asChild size="lg" className="h-12 rounded-xl bg-primary px-6 text-primary-foreground hover:bg-primary/90">

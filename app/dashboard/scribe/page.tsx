@@ -22,18 +22,18 @@ import {
 
 type MedicalSummary = {
   language: string
-  chiefComplaint: string
+  mainIssue: string
   symptoms: string[]
   history: string
-  assessment: string
-  treatmentPlan: string[]
-  followUp: string
-  patientSummary?: string
+  riskNotes: string
+  carePlan: string[]
+  nextSteps: string
+  simpleSummary?: string
 }
 
 const mockSummary: MedicalSummary = {
   language: "Hindi",
-  chiefComplaint: "Persistent abdominal pain for 3 days with nausea",
+  mainIssue: "Stomach pain for 3 days with nausea",
   symptoms: [
     "Sharp pain in lower right abdomen",
     "Nausea and occasional vomiting",
@@ -41,17 +41,17 @@ const mockSummary: MedicalSummary = {
     "Loss of appetite",
     "Difficulty sleeping due to pain",
   ],
-  history: "No prior surgical history. Patient reports similar episode 6 months ago that resolved with medication. Family history of gastrointestinal conditions.",
-  assessment: "Clinical presentation suggests possible appendicitis. McBurney's point tenderness present. Rebound tenderness noted. Recommend urgent ultrasound and blood work including CBC and CRP.",
-  treatmentPlan: [
-    "NPO (nil per os) status until imaging results",
-    "IV fluid administration for hydration",
-    "Paracetamol 500mg for pain and fever management",
-    "Urgent abdominal ultrasound",
-    "CBC, CRP, and urinalysis",
-    "Surgical consultation if imaging confirms appendicitis",
+  history: "No previous surgery. Similar pain happened 6 months ago and improved with medicines.",
+  riskNotes: "Signs may suggest appendix irritation. Seek urgent scan and blood tests at the nearest hospital.",
+  carePlan: [
+    "Avoid heavy food until professional review",
+    "Give clean drinking water in small sips",
+    "Paracetamol for pain/fever as advised",
+    "Get abdomen ultrasound soon",
+    "Do basic blood tests",
+    "Move to district hospital if pain increases",
   ],
-  followUp: "Patient to remain under observation. Re-evaluate within 4-6 hours based on lab results. If surgical intervention needed, transfer to district hospital.",
+  nextSteps: "Observe for 4-6 hours. If fever rises, vomiting continues, or pain worsens, go to emergency immediately.",
 }
 
 function AudioWaveform({ isRecording }: { isRecording: boolean }) {
@@ -261,7 +261,7 @@ export default function ScribePage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Polyglot Scribe</h1>
-        <p className="text-muted-foreground">Record or upload consultations for AI-powered medical summaries</p>
+        <p className="text-muted-foreground">Record or upload voice notes for simple multilingual health summaries</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -269,7 +269,7 @@ export default function ScribePage() {
         <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-card-foreground">Audio Input</CardTitle>
-            <CardDescription>Record a consultation or upload an audio file</CardDescription>
+            <CardDescription>Record a health voice note or upload an audio file</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
             {/* Waveform */}
@@ -354,25 +354,25 @@ export default function ScribePage() {
               </div>
             </div>
 
-            {/* Patient-friendly summary */}
-            {summary.patientSummary && (
+            {/* Simple summary */}
+            {summary.simpleSummary && (
               <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
                 <CardContent className="flex items-start gap-3 p-4">
                   <div>
                     <span className="text-xs font-medium text-muted-foreground">In simple words</span>
-                    <p className="mt-1 text-sm leading-relaxed text-foreground">{summary.patientSummary}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-foreground">{summary.simpleSummary}</p>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Chief Complaint */}
+            {/* Main issue */}
             <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardContent className="flex items-start gap-3 p-4">
                 <MessageSquare className="mt-0.5 size-4 text-primary shrink-0" />
                 <div>
-                  <span className="text-xs font-medium text-muted-foreground">Chief Complaint</span>
-                  <p className="mt-1 text-sm text-foreground">{summary.chiefComplaint}</p>
+                  <span className="text-xs font-medium text-muted-foreground">Main Issue</span>
+                  <p className="mt-1 text-sm text-foreground">{summary.mainIssue}</p>
                 </div>
               </CardContent>
             </Card>
@@ -406,26 +406,26 @@ export default function ScribePage() {
               </CardContent>
             </Card>
 
-            {/* Assessment */}
+            {/* Risk notes */}
             <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardContent className="flex items-start gap-3 p-4">
                 <Stethoscope className="mt-0.5 size-4 text-warning shrink-0" />
                 <div>
-                  <span className="text-xs font-medium text-muted-foreground">Assessment</span>
-                  <p className="mt-1 text-sm leading-relaxed text-foreground">{summary.assessment}</p>
+                  <span className="text-xs font-medium text-muted-foreground">Risk Notes</span>
+                  <p className="mt-1 text-sm leading-relaxed text-foreground">{summary.riskNotes}</p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Treatment Plan */}
+            {/* Care plan */}
             <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardContent className="flex flex-col gap-2 p-4">
                 <div className="flex items-center gap-2">
                   <Pill className="size-4 text-primary" />
-                  <span className="text-xs font-medium text-muted-foreground">Treatment Plan</span>
+                  <span className="text-xs font-medium text-muted-foreground">Care Plan</span>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  {summary.treatmentPlan.map((step, i) => (
+                  {summary.carePlan.map((step, i) => (
                     <div key={i} className="flex items-start gap-3 rounded-lg bg-secondary/30 p-2.5">
                       <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[10px] font-medium text-primary">
                         {i + 1}
@@ -437,24 +437,24 @@ export default function ScribePage() {
               </CardContent>
             </Card>
 
-            {/* Follow-up */}
+            {/* Next steps */}
             <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardContent className="flex items-start gap-3 p-4">
                 <Calendar className="mt-0.5 size-4 text-chart-5 shrink-0" />
                 <div>
-                  <span className="text-xs font-medium text-muted-foreground">Follow-up Instructions</span>
-                  <p className="mt-1 text-sm leading-relaxed text-foreground">{summary.followUp}</p>
+                  <span className="text-xs font-medium text-muted-foreground">Next Steps</span>
+                  <p className="mt-1 text-sm leading-relaxed text-foreground">{summary.nextSteps}</p>
                 </div>
               </CardContent>
             </Card>
           </div>
         ) : (
-          <Card className="flex items-center justify-center border-border/50 bg-card/60 backdrop-blur-sm min-h-[300px]">
+          <Card className="min-h-75 flex items-center justify-center border-border/50 bg-card/60 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3 text-center p-8">
               <div className="flex size-16 items-center justify-center rounded-2xl bg-secondary/50">
                 <ClipboardList className="size-7 text-muted-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground">Record or upload audio to generate a medical summary</p>
+              <p className="text-sm text-muted-foreground">Record or upload audio to generate a health summary</p>
             </div>
           </Card>
         )}

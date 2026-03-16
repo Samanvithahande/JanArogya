@@ -234,7 +234,7 @@ export default function RxVoxPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Rx-Vox</h1>
-        <p className="text-muted-foreground">Scan prescriptions and convert to audio instructions</p>
+        <p className="text-muted-foreground">Scan medicine slips and convert to easy audio guidance</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
@@ -243,7 +243,7 @@ export default function RxVoxPage() {
           <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-card-foreground">Prescription Upload</CardTitle>
-              <CardDescription>Upload a prescription image for OCR extraction</CardDescription>
+              <CardDescription>Upload a medicine slip image to extract details</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               {!preview ? (
@@ -427,12 +427,12 @@ export default function RxVoxPage() {
               ))}
             </div>
           ) : (
-            <Card className="flex items-center justify-center border-border/50 bg-card/60 backdrop-blur-sm min-h-[400px]">
+            <Card className="min-h-100 flex items-center justify-center border-border/50 bg-card/60 backdrop-blur-sm">
               <div className="flex flex-col items-center gap-3 text-center p-8">
                 <div className="flex size-16 items-center justify-center rounded-2xl bg-secondary/50">
                   <Volume2 className="size-7 text-muted-foreground" />
                 </div>
-                <p className="text-sm text-muted-foreground">Upload a prescription to extract medicine details</p>
+                <p className="text-sm text-muted-foreground">Upload a medicine slip to extract medicine details</p>
               </div>
             </Card>
           )}

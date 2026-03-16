@@ -12,9 +12,9 @@ function FloatingOrb({ className }: { className?: string }) {
 }
 
 const miniHighlights = [
-  "AI triage in under 30s",
-  "Voice prescription in local language",
-  "Auto-structured visit summaries",
+  "Injury guidance in under 30s",
+  "Medicine voice in local language",
+  "Simple health notes for you",
 ]
 
 export function HeroSection() {
@@ -38,7 +38,7 @@ export function HeroSection() {
         >
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.13em] text-primary">
             <Sparkles className="size-3.5" />
-            AI Healthcare For Every Village
+            AI Health Guidance For You
           </div>
 
           <h1 className="font-display text-4xl leading-[1.05] text-foreground text-balance md:text-6xl lg:text-7xl">
@@ -47,7 +47,7 @@ export function HeroSection() {
           </h1>
 
           <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-            JanArogya helps healthcare workers triage trauma, generate multilingual clinical notes, and explain medication clearly through voice.
+            JanArogya helps rural users get fast injury guidance, multilingual health summaries, and clear medicine instructions by voice.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-4">
@@ -77,11 +77,11 @@ export function HeroSection() {
             mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           }`}
         >
-          <div className="landing-shell relative rounded-[2rem] border border-primary/20 p-4 md:p-6">
-            <div className="landing-grid-pattern absolute inset-0 rounded-[2rem]" />
+          <div className="landing-shell relative rounded-4xl border border-primary/20 p-4 md:p-6">
+            <div className="landing-grid-pattern absolute inset-0 rounded-4xl" />
             <div className="relative rounded-2xl border border-border/60 bg-card/80 p-5 backdrop-blur md:p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-400">Live Triage</span>
+                <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-400">Live Safety Check</span>
                 <span className="text-xs text-muted-foreground">Updated just now</span>
               </div>
 
@@ -89,25 +89,25 @@ export function HeroSection() {
                 <div className="rounded-xl border border-border/60 bg-background/65 p-4">
                   <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
                     <TriangleAlert className="size-4 text-warning" />
-                    Severity: Moderate
+                    Risk Level: Moderate
                   </div>
-                  <p className="text-sm text-muted-foreground">Suggested action: Clean wound, assess bleeding pattern, monitor vitals for 30 minutes.</p>
+                  <p className="text-sm text-muted-foreground">Suggested action: Clean wound gently, control bleeding, and seek nearby help if pain worsens.</p>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-border/60 bg-background/65 p-4">
                     <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
                       <Languages className="size-4 text-primary" />
-                      Scribe
+                      Health Notes
                     </div>
-                    <p className="text-xs text-muted-foreground">Hindi detected. Summary translated to English for referral.</p>
+                    <p className="text-xs text-muted-foreground">Hindi detected. Summary translated into easy personal notes.</p>
                   </div>
                   <div className="rounded-xl border border-border/60 bg-background/65 p-4">
                     <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
                       <Mic className="size-4 text-chart-3" />
-                      Rx Voice
+                      Medicine Voice
                     </div>
-                    <p className="text-xs text-muted-foreground">Medication guide generated in Kannada with simple dosage prompts.</p>
+                    <p className="text-xs text-muted-foreground">Medicine guide generated in Kannada with simple step-by-step prompts.</p>
                   </div>
                 </div>
               </div>
