@@ -3,6 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
+import { LanguageDropdown } from "@/components/i18n/language-dropdown"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,6 +26,10 @@ export default function LoginPage() {
 
   return (
     <div className="landing-page relative flex min-h-screen items-center overflow-hidden px-4 py-8 md:px-6 md:py-12">
+      <div className="absolute right-4 top-4 z-20">
+        <LanguageDropdown compact />
+      </div>
+
       <div className="absolute left-[10%] top-10 size-80 rounded-full bg-primary/15 blur-3xl" />
       <div className="absolute bottom-8 right-[8%] size-96 rounded-full bg-chart-3/15 blur-3xl" />
 

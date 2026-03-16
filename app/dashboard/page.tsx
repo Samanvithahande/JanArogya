@@ -29,14 +29,14 @@ import {
 
 const stats = [
   {
-    title: "Checks Completed Today",
+    title: "My Checks Today",
     value: "46",
     trend: "+9% vs yesterday",
     icon: Users,
     chip: "bg-primary/15 text-primary",
   },
   {
-    title: "Average Safety Check Time",
+    title: "My Avg Check Time",
     value: "02:18",
     trend: "-24 sec improvement",
     icon: Timer,
@@ -95,22 +95,22 @@ const recentQueue = [
 
 const quickActions = [
   {
-    title: "Start Trauma Assessment",
-    description: "Capture injury and generate severity guidance",
+    title: "Check My Injury",
+    description: "Upload an image and get instant risk guidance",
     href: "/dashboard/trauma",
     icon: Activity,
     style: "from-primary/20 to-primary/5 border-primary/25",
   },
   {
-    title: "Open Polyglot Scribe",
-    description: "Record and auto-structure your health voice notes",
+    title: "Record My Health Note",
+    description: "Speak naturally and get a structured summary",
     href: "/dashboard/scribe",
     icon: Languages,
     style: "from-chart-2/20 to-chart-2/5 border-chart-2/25",
   },
   {
-    title: "Launch Rx-Vox",
-    description: "Translate prescriptions into clear audio",
+    title: "Read My Medicine Slip",
+    description: "Convert medicine details into easy voice guidance",
     href: "/dashboard/rxvox",
     icon: Volume2,
     style: "from-chart-3/20 to-chart-3/5 border-chart-3/25",
@@ -132,42 +132,45 @@ export default function DashboardPage() {
           <div>
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.13em] text-primary">
               <Sparkles className="size-3.5" />
-              Shift Overview
+              My Health Today
             </div>
             <h1 className="font-display text-3xl leading-tight text-foreground md:text-4xl">
-              Good morning, Rajan. Your personal health dashboard is ready.
+              Welcome back, Rajan. Your personal health space is ready.
             </h1>
             <p className="mt-3 max-w-2xl text-muted-foreground">
-              One urgent injury case needs quick attention. All other modules are working normally.
+              Use this space to track your health notes, medicine guidance, and urgent alerts in one clear view.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
-                <Link href="/dashboard/emergency">
-                  Open Emergency Help
+                <Link href="/dashboard/trauma">
+                  Start New Check
                   <ArrowRight className="ml-2 size-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" className="rounded-xl border-primary/25 bg-background/60 hover:bg-primary/10">
-                <Link href="/dashboard/history">Review Saved History</Link>
+                <Link href="/dashboard/scribe">Add Voice Note</Link>
+              </Button>
+              <Button asChild variant="ghost" className="rounded-xl text-primary hover:bg-primary/10">
+                <Link href="/dashboard/emergency">Emergency Help</Link>
               </Button>
             </div>
           </div>
 
           <div className="grid gap-3">
-            <div className="rounded-2xl border border-destructive/25 bg-destructive/10 p-4">
-              <div className="mb-1 flex items-center gap-2 text-sm font-medium text-destructive-foreground">
+            <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
+              <div className="mb-1 flex items-center gap-2 text-sm font-medium text-primary">
                 <CircleAlert className="size-4" />
-                Critical watchlist
+                Attention Needed
               </div>
-              <p className="text-sm text-muted-foreground">Injury case T-1041 is flagged for immediate support.</p>
+              <p className="text-sm text-muted-foreground">You have 1 recent entry marked high-risk. Review it and follow the next-step guidance.</p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-card/75 p-4">
               <div className="mb-1 flex items-center gap-2 text-sm font-medium text-foreground">
                 <Stethoscope className="size-4 text-primary" />
-                Personal status
+                Today at a Glance
               </div>
-              <p className="text-sm text-muted-foreground">12 users online, 4 note sessions active, and 8 medicine voice requests completed this hour.</p>
+              <p className="text-sm text-muted-foreground">2 health notes saved, 3 medicine reminders listened, and 1 emergency contact opened today.</p>
             </div>
           </div>
         </div>

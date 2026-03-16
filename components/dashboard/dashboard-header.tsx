@@ -3,6 +3,7 @@
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Bell, CalendarDays, Search, Siren, Sparkles } from "lucide-react"
+import { LanguageDropdown } from "@/components/i18n/language-dropdown"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -39,6 +40,14 @@ export function DashboardHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <div
+          data-no-translate="true"
+          className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-2 py-1"
+        >
+          <span className="hidden text-xs font-medium text-primary sm:inline">Language</span>
+          <LanguageDropdown compact />
+        </div>
+
         <div className="hidden items-center gap-2 rounded-xl border border-border/60 bg-card/70 px-3 py-2 text-xs text-muted-foreground sm:flex">
           <CalendarDays className="size-4 text-primary" />
           {today}

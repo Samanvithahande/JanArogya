@@ -3,6 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
+import { LanguageDropdown } from "@/components/i18n/language-dropdown"
 import { Menu, Sparkles, X } from "lucide-react"
 import { useState } from "react"
 
@@ -39,6 +40,7 @@ export function LandingNavbar() {
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
+          <LanguageDropdown compact />
           <Button variant="ghost" asChild className="hover:bg-primary/10">
             <Link href="/login">Sign In</Link>
           </Button>
@@ -73,6 +75,7 @@ export function LandingNavbar() {
             <Link href="#impact" className="text-sm text-muted-foreground" onClick={() => setMobileOpen(false)}>
               Impact
             </Link>
+            <LanguageDropdown compact />
             <div className="flex flex-col gap-2 pt-2">
               <Button variant="ghost" asChild>
                 <Link href="/login">Sign In</Link>
