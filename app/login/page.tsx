@@ -7,21 +7,44 @@ import { LanguageDropdown } from "@/components/i18n/language-dropdown"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { CheckCircle2, Eye, EyeOff, LogIn, ShieldCheck, Sparkles, Smartphone, Volume2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [errorMessage, setErrorMessage] = useState("")
   const router = useRouter()
+  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setErrorMessage("")
     setLoading(true)
-    setTimeout(() => {
-      router.push("/dashboard")
-    }, 800)
+
+    if (!supabase) {
+      setErrorMessage("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local")
+      setLoading(false)
+      return
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      setErrorMessage(error.message)
+      setLoading(false)
+      return
+    }
+
+    router.refresh()
+    router.push("/dashboard")
   }
 
   return (
@@ -103,6 +126,9 @@ export default function LoginPage() {
                   placeholder="you@example.com"
                   required
                   className="h-11 border-primary/20 bg-background/70"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
                 />
               </div>
 
@@ -120,6 +146,9 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     required
                     className="h-11 border-primary/20 bg-background/70 pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
                   />
                   <button
                     type="button"
@@ -136,6 +165,12 @@ export default function LoginPage() {
                 <CheckCircle2 className="size-4 text-emerald-400" />
                 Your session is encrypted and secure.
               </div>
+
+              {errorMessage ? (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
+                  {errorMessage}
+                </div>
+              ) : null}
 
               <Button
                 type="submit"

@@ -8,21 +8,88 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useState } from "react"
-import { CheckCircle2, Eye, EyeOff, Languages, Sparkles, UserPlus, Waves } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { CheckCircle2, Eye, EyeOff, Languages, MailCheck, Sparkles, UserPlus, Waves } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [email, setEmail] = useState("")
+  const [location, setLocation] = useState("")
+  const [password, setPassword] = useState("")
+  const [role, setRole] = useState("self")
+  const [errorMessage, setErrorMessage] = useState("")
+  const [showVerifyPopup, setShowVerifyPopup] = useState(false)
+  const [redirectSeconds, setRedirectSeconds] = useState(5)
   const router = useRouter()
+  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
 
-  function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    if (!showVerifyPopup) {
+      return
+    }
+
+    setRedirectSeconds(5)
+
+    const intervalId = window.setInterval(() => {
+      setRedirectSeconds((prev) => (prev > 1 ? prev - 1 : 1))
+    }, 1000)
+
+    const redirectId = window.setTimeout(() => {
+      router.push("/login")
+    }, 5000)
+
+    return () => {
+      window.clearInterval(intervalId)
+      window.clearTimeout(redirectId)
+    }
+  }, [showVerifyPopup, router])
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setErrorMessage("")
+    setShowVerifyPopup(false)
     setLoading(true)
-    setTimeout(() => {
-      router.push("/dashboard")
-    }, 800)
+
+    if (!supabase) {
+      setErrorMessage("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local")
+      setLoading(false)
+      return
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          full_name: `${firstName} ${lastName}`.trim(),
+          location,
+          role,
+        },
+      },
+    })
+
+    if (error) {
+      setErrorMessage(error.message)
+      setLoading(false)
+      return
+    }
+
+    if (!data.session) {
+      setShowVerifyPopup(true)
+      setLoading(false)
+      return
+    }
+
+    router.refresh()
+    router.push("/dashboard")
   }
 
   return (
@@ -56,27 +123,60 @@ export default function RegisterPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" placeholder="First" required className="h-11 border-primary/20 bg-background/70" />
+                  <Input
+                    id="firstName"
+                    placeholder="First"
+                    required
+                    className="h-11 border-primary/20 bg-background/70"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    disabled={loading}
+                  />
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" placeholder="Last" required className="h-11 border-primary/20 bg-background/70" />
+                  <Input
+                    id="lastName"
+                    placeholder="Last"
+                    required
+                    className="h-11 border-primary/20 bg-background/70"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    disabled={loading}
+                  />
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="you@example.com" required className="h-11 border-primary/20 bg-background/70" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  required
+                  className="h-11 border-primary/20 bg-background/70"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
               </div>
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="location">Your Area</Label>
-                <Input id="location" placeholder="Your location" required className="h-11 border-primary/20 bg-background/70" />
+                <Input
+                  id="location"
+                  placeholder="Your location"
+                  required
+                  className="h-11 border-primary/20 bg-background/70"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  disabled={loading}
+                />
               </div>
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="role">Using As</Label>
-                <Select required>
+                <Select value={role} onValueChange={setRole}>
                   <SelectTrigger className="h-11 border-primary/20 bg-background/70">
                     <SelectValue placeholder="Select profile" />
                   </SelectTrigger>
@@ -95,6 +195,9 @@ export default function RegisterPage() {
                     placeholder="Create a strong password"
                     required
                     className="h-11 border-primary/20 bg-background/70 pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
                   />
                   <button
                     type="button"
@@ -111,6 +214,12 @@ export default function RegisterPage() {
                 <CheckCircle2 className="size-4 text-emerald-400" />
                 Safe signup built for rural individual users.
               </div>
+
+              {errorMessage ? (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
+                  {errorMessage}
+                </div>
+              ) : null}
 
               <Button
                 type="submit"
@@ -176,6 +285,37 @@ export default function RegisterPage() {
           </CardContent>
         </Card>
       </div>
+
+      {showVerifyPopup ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-background/65 p-4 backdrop-blur-sm">
+          <div className="landing-glass w-full max-w-md rounded-3xl border border-primary/25 bg-background/90 p-6 shadow-2xl shadow-primary/20 animate-in fade-in zoom-in-95 duration-300 backdrop-blur-xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="rounded-2xl border border-primary/30 bg-primary/10 p-2.5">
+                <MailCheck className="size-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-display text-xl text-foreground">Check your email</h3>
+                <p className="text-xs text-muted-foreground">Verification link has been sent.</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Please verify your account from your inbox, then sign in to continue.
+            </p>
+
+            <div className="mt-5 rounded-xl border border-primary/25 bg-primary/10 px-3 py-2 text-sm text-primary">
+              Redirecting to login in {redirectSeconds}s...
+            </div>
+
+            <Button
+              onClick={() => router.push("/login")}
+              className="mt-4 h-10 w-full rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Go to Login Now
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

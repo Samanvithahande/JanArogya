@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
 import {
   LayoutDashboard,
   Activity,
@@ -35,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const mainNav = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -51,6 +53,58 @@ const secondaryNav = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
+  const [displayName, setDisplayName] = useState("Loading...")
+  const [displayRole, setDisplayRole] = useState("Personal Account")
+
+  useEffect(() => {
+    if (!supabase) {
+      return
+    }
+
+    const loadUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        return
+      }
+
+      const metadata = user.user_metadata ?? {}
+      const fullName = (metadata.full_name as string | undefined)?.trim()
+      const firstName = (metadata.first_name as string | undefined)?.trim()
+      const lastName = (metadata.last_name as string | undefined)?.trim()
+      const role = (metadata.role as string | undefined)?.trim()
+
+      const fallbackName = user.email?.split("@")[0] || "User"
+      const resolvedName = fullName || `${firstName || ""} ${lastName || ""}`.trim() || fallbackName
+
+      setDisplayName(resolvedName)
+      setDisplayRole(role === "self" ? "Personal Account" : role || "Personal Account")
+    }
+
+    void loadUser()
+  }, [supabase])
+
+  async function handleSignOut() {
+    if (!supabase) {
+      router.push("/login")
+      return
+    }
+
+    await supabase.auth.signOut()
+    router.refresh()
+    router.push("/login")
+  }
+
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "U"
 
   return (
     <Sidebar collapsible="icon" className="border-sidebar-border/60 bg-sidebar/85 backdrop-blur-xl">
@@ -138,11 +192,11 @@ export function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton size="lg" className="rounded-xl border border-border/50 bg-card/60">
                   <Avatar className="size-8">
-                    <AvatarFallback className="bg-primary/20 text-primary text-xs">RK</AvatarFallback>
+                    <AvatarFallback className="bg-primary/20 text-primary text-xs">{initials}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col text-left text-xs">
-                    <span className="font-medium text-sidebar-foreground">Rajan Kumar</span>
-                    <span className="text-sidebar-foreground/60">Personal Account</span>
+                    <span className="font-medium text-sidebar-foreground">{displayName}</span>
+                    <span className="text-sidebar-foreground/60">{displayRole}</span>
                   </div>
                   <ChevronDown className="ml-auto size-4" />
                 </SidebarMenuButton>
@@ -154,11 +208,9 @@ export function AppSidebar() {
                     Settings
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/login">
-                    <LogOut className="mr-2 size-4" />
-                    Sign Out
-                  </Link>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 size-4" />
+                  Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

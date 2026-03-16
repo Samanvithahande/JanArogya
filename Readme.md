@@ -1,5 +1,24 @@
 # JanArogya — User Flow Diagram 🏥
 
+## Supabase Email Auth Setup
+
+1. Create a Supabase project.
+2. In Supabase Dashboard, go to `Authentication -> URL Configuration` and set:
+     - `Site URL`: `http://localhost:3000`
+     - `Redirect URLs`: `http://localhost:3000/login`
+3. Copy `.env.example` to `.env.local` and set:
+     - `NEXT_PUBLIC_SUPABASE_URL`
+     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. In Supabase Dashboard, go to `Authentication -> Providers -> Email` and keep Email provider enabled.
+5. Start app with `npm run dev`.
+
+Current auth behavior in this repo:
+- `Register` uses Supabase email/password sign-up and stores basic profile metadata.
+- If email confirmation is enabled, user sees a "check your email" message after sign-up.
+- `Login` uses Supabase email/password sign-in.
+- All `/dashboard/*` routes are server-protected and redirect unauthenticated users to `/login`.
+- Sidebar `Sign Out` performs Supabase sign-out and returns to login.
+
 ---
 
 ## Complete User Journey
