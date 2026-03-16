@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Activity, Mic, FileText, Upload, Languages, Volume2, AlertTriangle, AudioWaveform } from "lucide-react"
+import { Activity, Languages, ShieldPlus, Volume2 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 interface FeatureCardProps {
@@ -40,19 +40,19 @@ function FeatureCard({ title, description, icon, badge, badgeColor, details, ind
       }`}
       style={{ transitionDelay: `${index * 150}ms` }}
     >
-      <Card className="group relative overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <Card className="group landing-glass relative overflow-hidden border-primary/15 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/15">
+        <div className="absolute inset-0 bg-linear-to-br from-primary/15 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         <CardHeader className="relative">
           <div className="flex items-center justify-between">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110">
+            <div className="flex size-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110">
               {icon}
             </div>
             <Badge variant="secondary" className={badgeColor}>
               {badge}
             </Badge>
           </div>
-          <CardTitle className="pt-4 text-xl text-card-foreground">{title}</CardTitle>
-          <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+          <CardTitle className="font-display pt-4 text-2xl text-card-foreground">{title}</CardTitle>
+          <p className="text-sm leading-relaxed text-muted-foreground md:text-base">{description}</p>
         </CardHeader>
         <CardContent className="relative">
           <div className="flex flex-col gap-2">
@@ -72,10 +72,10 @@ function FeatureCard({ title, description, icon, badge, badgeColor, details, ind
 const features = [
   {
     title: "ET-AI Trauma Triage",
-    description: "Upload injury images for AI-powered severity assessment with instant color-coded urgency indicators.",
+    description: "Rapid image-based trauma assessment with urgency flags and actionable next-step care guidance.",
     icon: <Activity className="size-6" />,
     badge: "Critical",
-    badgeColor: "bg-destructive/10 text-destructive-foreground border-destructive/20",
+    badgeColor: "bg-destructive/15 text-red-300 border-destructive/30",
     details: [
       "Severity scoring (1-10)",
       "Color-coded urgency indicator",
@@ -85,10 +85,10 @@ const features = [
   },
   {
     title: "Polyglot Scribe",
-    description: "Auto-detect languages and generate structured medical summaries from audio consultations.",
+    description: "Understands speech across languages and converts conversation into clean clinical summaries.",
     icon: <Languages className="size-6" />,
     badge: "AI Powered",
-    badgeColor: "bg-chart-2/10 text-chart-2 border-chart-2/20",
+    badgeColor: "bg-primary/15 text-primary border-primary/30",
     details: [
       "Audio waveform visualization",
       "Automatic language detection",
@@ -98,10 +98,10 @@ const features = [
   },
   {
     title: "Rx-Vox",
-    description: "Scan prescriptions and convert them to audio instructions in the patient's preferred language.",
+    description: "Turns prescriptions into clear, spoken medicine instructions for better patient adherence.",
     icon: <Volume2 className="size-6" />,
     badge: "Voice",
-    badgeColor: "bg-chart-3/10 text-chart-3 border-chart-3/20",
+    badgeColor: "bg-emerald-500/15 text-emerald-300 border-emerald-400/30",
     details: [
       "OCR prescription scanning",
       "Medicine extraction & listing",
@@ -113,17 +113,17 @@ const features = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="relative py-24">
+    <section id="features" className="relative px-6 py-20 md:py-24">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mx-auto mb-16 max-w-2xl text-center">
-          <Badge variant="outline" className="mb-4 border-primary/30 text-primary">
+          <Badge variant="outline" className="mb-4 border-primary/30 bg-primary/10 text-primary">
             Core Modules
           </Badge>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground text-balance md:text-4xl">
-            Intelligent Healthcare Tools
+          <h2 className="font-display text-3xl tracking-tight text-foreground text-balance md:text-5xl">
+            Three brilliant modules. One seamless care experience.
           </h2>
           <p className="mt-4 text-muted-foreground text-pretty">
-            Three powerful AI modules designed to support healthcare workers in rural and underserved areas.
+            Crafted for speed, empathy, and accuracy so your team can make better decisions with less effort.
           </p>
         </div>
 
@@ -131,6 +131,11 @@ export function FeaturesSection() {
           {features.map((feature, index) => (
             <FeatureCard key={feature.title} {...feature} index={index} />
           ))}
+        </div>
+
+        <div className="mx-auto mt-8 flex max-w-3xl items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-center text-sm text-primary">
+          <ShieldPlus className="size-4 shrink-0" />
+          Clinically assistive AI only. Final diagnosis and treatment remain with trained medical professionals.
         </div>
       </div>
     </section>

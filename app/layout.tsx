@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Geist_Mono } from 'next/font/google'
+import { Geist_Mono, Plus_Jakarta_Sans, Sora } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
-const _inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const _plusJakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-plus-jakarta' })
+const _sora = Sora({ subsets: ['latin'], variable: '--font-sora' })
 const _geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
@@ -30,9 +31,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body   suppressHydrationWarning
-  className="font-sans antialiased bg-gradient-to-b from-white to-[#f0f7ff]"
->
+      <body
+        suppressHydrationWarning
+        className={`${_plusJakarta.variable} ${_sora.variable} ${_geistMono.variable} font-sans antialiased bg-linear-to-b from-white to-[#f0f7ff]`}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

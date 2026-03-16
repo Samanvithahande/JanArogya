@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Shield, Activity, Mic } from "lucide-react"
+import { ArrowRight, CheckCircle2, Languages, Mic, Sparkles, TriangleAlert } from "lucide-react"
 import { useEffect, useState } from "react"
 
 function FloatingOrb({ className }: { className?: string }) {
@@ -10,6 +10,12 @@ function FloatingOrb({ className }: { className?: string }) {
     <div className={`absolute rounded-full blur-3xl opacity-20 ${className}`} />
   )
 }
+
+const miniHighlights = [
+  "AI triage in under 30s",
+  "Voice prescription in local language",
+  "Auto-structured visit summaries",
+]
 
 export function HeroSection() {
   const [mounted, setMounted] = useState(false)
@@ -19,99 +25,91 @@ export function HeroSection() {
   }, [])
 
   return (
-    <section className="relative min-h-screen overflow-hidden pt-24">
-      {/* Background effects */}
-      <FloatingOrb className="top-20 left-10 size-72 bg-primary animate-pulse" />
-      <FloatingOrb className="bottom-20 right-10 size-96 bg-chart-3 animate-pulse delay-1000" />
-      <FloatingOrb className="top-1/2 left-1/2 size-64 -translate-x-1/2 -translate-y-1/2 bg-chart-2 animate-pulse delay-500" />
+    <section className="relative overflow-hidden px-6 pb-20 pt-28 md:pb-24 md:pt-36">
+      <FloatingOrb className="-left-20 top-0 size-80 bg-primary" />
+      <FloatingOrb className="right-0 top-32 size-96 bg-chart-3" />
+      <FloatingOrb className="bottom-0 left-1/3 size-80 bg-chart-2" />
 
-      <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-16 px-6 py-20 lg:flex-row lg:py-32">
-        {/* Left content */}
+      <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[1.08fr_1fr]">
         <div
-          className={`flex max-w-2xl flex-1 flex-col gap-8 transition-all duration-1000 ${
+          className={`relative z-10 transition-all duration-1000 ${
             mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           }`}
         >
-          <div className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 w-fit">
-            <Activity className="size-4 text-primary" />
-            <span className="text-xs font-medium text-primary">AI-Powered Healthcare</span>
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.13em] text-primary">
+            <Sparkles className="size-3.5" />
+            AI Healthcare For Every Village
           </div>
 
-          <h1 className="text-4xl font-bold leading-tight tracking-tight text-foreground text-balance md:text-5xl lg:text-6xl">
-            AI-Powered Rural Healthcare{" "}
-            <span className="text-primary">Assistance</span>
+          <h1 className="font-display text-4xl leading-[1.05] text-foreground text-balance md:text-6xl lg:text-7xl">
+            Beautifully simple tools for
+            <span className="landing-gradient-text block">life-critical care moments.</span>
           </h1>
 
-          <p className="text-lg leading-relaxed text-muted-foreground text-pretty">
-            Empowering healthcare workers with intelligent trauma triage, multilingual medical scribe,
-            and prescription voice support. Bringing advanced healthcare technology to every corner.
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
+            JanArogya helps healthcare workers triage trauma, generate multilingual clinical notes, and explain medication clearly through voice.
           </p>
 
-          <div className="flex flex-wrap gap-4">
-            <Button size="lg" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 glow-teal">
+          <div className="mt-8 flex flex-wrap gap-4">
+            <Button size="lg" asChild className="h-12 rounded-xl bg-primary px-6 text-primary-foreground shadow-xl shadow-primary/30 hover:bg-primary/90">
               <Link href="/dashboard">
                 Launch Dashboard
                 <ArrowRight className="ml-2 size-4" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="#features">View Modules</Link>
+            <Button size="lg" variant="outline" asChild className="h-12 rounded-xl border-primary/25 bg-background/60 px-6 hover:bg-primary/10">
+              <Link href="#features">Explore Modules</Link>
             </Button>
           </div>
 
-          <div className="flex items-center gap-8 pt-4">
-            <div className="flex flex-col">
-              <span className="text-2xl font-bold text-foreground">10K+</span>
-              <span className="text-xs text-muted-foreground">Consultations</span>
-            </div>
-            <div className="h-8 w-px bg-border" />
-            <div className="flex flex-col">
-              <span className="text-2xl font-bold text-foreground">500+</span>
-              <span className="text-xs text-muted-foreground">Health Workers</span>
-            </div>
-            <div className="h-8 w-px bg-border" />
-            <div className="flex flex-col">
-              <span className="text-2xl font-bold text-foreground">15+</span>
-              <span className="text-xs text-muted-foreground">Languages</span>
-            </div>
+          <div className="mt-8 grid gap-2 sm:grid-cols-2">
+            {miniHighlights.map((item) => (
+              <div key={item} className="flex items-center gap-2 text-sm text-foreground/90">
+                <CheckCircle2 className="size-4 text-emerald-400" />
+                <span>{item}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Right: Visual */}
         <div
-          className={`relative flex flex-1 items-center justify-center transition-all delay-300 duration-1000 ${
+          className={`relative transition-all delay-200 duration-1000 ${
             mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           }`}
         >
-          <div className="relative size-80 md:size-96">
-            {/* Central shield */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="glass-card glow-teal flex size-48 items-center justify-center rounded-3xl md:size-56">
-                <Shield className="size-20 text-primary md:size-24" strokeWidth={1} />
+          <div className="landing-shell relative rounded-[2rem] border border-primary/20 p-4 md:p-6">
+            <div className="landing-grid-pattern absolute inset-0 rounded-[2rem]" />
+            <div className="relative rounded-2xl border border-border/60 bg-card/80 p-5 backdrop-blur md:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-400">Live Triage</span>
+                <span className="text-xs text-muted-foreground">Updated just now</span>
               </div>
-            </div>
 
-            {/* Orbiting cards */}
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 animate-bounce">
-              <div className="glass-card flex items-center gap-2 rounded-xl px-4 py-3">
-                <Activity className="size-5 text-primary" />
-                <span className="text-xs font-medium text-foreground">Trauma Triage</span>
-              </div>
-            </div>
+              <div className="space-y-4">
+                <div className="rounded-xl border border-border/60 bg-background/65 p-4">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                    <TriangleAlert className="size-4 text-warning" />
+                    Severity: Moderate
+                  </div>
+                  <p className="text-sm text-muted-foreground">Suggested action: Clean wound, assess bleeding pattern, monitor vitals for 30 minutes.</p>
+                </div>
 
-            <div className="absolute top-1/2 -right-4 -translate-y-1/2 animate-bounce delay-300">
-              <div className="glass-card flex items-center gap-2 rounded-xl px-4 py-3">
-                <Mic className="size-5 text-chart-3" />
-                <span className="text-xs font-medium text-foreground">Voice Rx</span>
-              </div>
-            </div>
-
-            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 animate-bounce delay-700">
-              <div className="glass-card flex items-center gap-2 rounded-xl px-4 py-3">
-                <svg className="size-5 text-chart-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg>
-                <span className="text-xs font-medium text-foreground">Polyglot Scribe</span>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-border/60 bg-background/65 p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Languages className="size-4 text-primary" />
+                      Scribe
+                    </div>
+                    <p className="text-xs text-muted-foreground">Hindi detected. Summary translated to English for referral.</p>
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-background/65 p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Mic className="size-4 text-chart-3" />
+                      Rx Voice
+                    </div>
+                    <p className="text-xs text-muted-foreground">Medication guide generated in Kannada with simple dosage prompts.</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
