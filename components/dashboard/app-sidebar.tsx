@@ -111,14 +111,14 @@ export function AppSidebar() {
       <SidebarHeader className="p-4">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Image
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/JanArogya%20Logo%20With%20No%20Bg%20%28Black%20Bg%29-YlntpvuipivBOHdn8EOJj1uOQqnw1P.png"
+            src="/JANAROGYAA.png"
             alt="JanArogya"
             width={130}
             height={36}
             className="h-8 w-auto group-data-[collapsible=icon]:hidden"
           />
           <Image
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/JanArogya%20Logo%20With%20No%20Bg%20%28Black%20Bg%29-YlntpvuipivBOHdn8EOJj1uOQqnw1P.png"
+            src="/JANAROGYAA.png"
             alt="JanArogya"
             width={32}
             height={32}
