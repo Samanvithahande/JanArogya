@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -28,6 +28,8 @@ import {
   Globe,
 } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { createActivityLog, createNotification, uploadFileForUser } from "@/lib/supabase/app-data"
 
 type Medicine = {
   name: string
@@ -37,38 +39,8 @@ type Medicine = {
   instructions: string
 }
 
-const mockMedicines: Medicine[] = [
-  {
-    name: "Amoxicillin",
-    dosage: "500mg",
-    frequency: "3 times daily",
-    duration: "7 days",
-    instructions: "Take after meals with water",
-  },
-  {
-    name: "Paracetamol",
-    dosage: "650mg",
-    frequency: "As needed (max 4/day)",
-    duration: "5 days",
-    instructions: "Take for fever or pain",
-  },
-  {
-    name: "Pantoprazole",
-    dosage: "40mg",
-    frequency: "Once daily",
-    duration: "14 days",
-    instructions: "Take on empty stomach, 30 min before breakfast",
-  },
-  {
-    name: "Cetirizine",
-    dosage: "10mg",
-    frequency: "Once daily at bedtime",
-    duration: "10 days",
-    instructions: "May cause drowsiness",
-  },
-]
-
 export default function RxVoxPage() {
+  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
@@ -76,6 +48,8 @@ export default function RxVoxPage() {
   const [medicines, setMedicines] = useState<Medicine[] | null>(null)
   const [language, setLanguage] = useState("hi")
   const [playingIndex, setPlayingIndex] = useState<number | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState("")
   const synthRef = useRef<SpeechSynthesis | null>(null)
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null)
 
@@ -84,6 +58,51 @@ export default function RxVoxPage() {
       synthRef.current = window.speechSynthesis
     }
   }, [])
+
+  const loadLatestScan = useCallback(async () => {
+    if (!supabase) return
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+    setUserId(user.id)
+
+    const { data } = await supabase
+      .from("rx_scans")
+      .select("language,medicines")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (!data) return
+
+    setLanguage(data.language || "hi")
+    setMedicines(Array.isArray(data.medicines) ? (data.medicines as Medicine[]) : [])
+  }, [supabase])
+
+  useEffect(() => {
+    void loadLatestScan()
+  }, [loadLatestScan])
+
+  useEffect(() => {
+    if (!supabase || !userId) return
+
+    const channel = supabase
+      .channel(`rx-live-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "rx_scans", filter: `user_id=eq.${userId}` },
+        () => void loadLatestScan()
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [loadLatestScan, supabase, userId])
 
   const languageMap: Record<string, string> = {
     en: "en-US",
@@ -103,6 +122,7 @@ export default function RxVoxPage() {
       setFile(droppedFile)
       setPreview(URL.createObjectURL(droppedFile))
       setMedicines(null)
+      setErrorMessage("")
     }
   }, [])
 
@@ -112,55 +132,93 @@ export default function RxVoxPage() {
       setFile(selected)
       setPreview(URL.createObjectURL(selected))
       setMedicines(null)
+      setErrorMessage("")
     }
   }, [])
 
   const handleProcess = async () => {
-
     if (!file) return
+
+    if (!supabase) {
+      setErrorMessage("Supabase is not configured.")
+      return
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      setErrorMessage("Please sign in again.")
+      return
+    }
 
     setProcessing(true)
     setProgress(20)
+    setErrorMessage("")
 
     try {
-
       const formData = new FormData()
       formData.append("image", file)
 
       const res = await fetch(`/api/rxvox`, {
         method: "POST",
-        body: formData
+        body: formData,
       })
 
       if (!res.ok) {
         const text = await res.text().catch(() => "")
-        console.error("/api/rxvox returned error:", res.status, text)
-        setProgress(0)
-        return
+        throw new Error(`Server responded ${res.status}: ${text}`)
       }
 
       const contentType = res.headers.get("content-type") || ""
       let data: any = null
-
       if (contentType.includes("application/json")) {
         data = await res.json()
       } else {
-        // Backend sometimes returns HTML error pages or raw text. Try to parse JSON, otherwise bail.
         const text = await res.text()
-        try {
-          data = JSON.parse(text)
-        } catch (e) {
-          console.error("Unexpected non-JSON response from /api/rxvox:", text)
-          setProgress(0)
-          return
-        }
+        data = JSON.parse(text)
       }
 
-      setMedicines(data?.medicines || [])
-      setProgress(100)
+      const parsedMedicines = Array.isArray(data?.medicines) ? (data.medicines as Medicine[]) : []
+      const uploaded = await uploadFileForUser(supabase, "rx-prescriptions", user.id, file)
 
+      const insertRes = await supabase
+        .from("rx_scans")
+        .insert({
+          user_id: user.id,
+          image_path: uploaded.path,
+          image_url: uploaded.publicUrl,
+          language,
+          medicines: parsedMedicines,
+        })
+        .select("id")
+        .single()
+
+      await createActivityLog(supabase, {
+        userId: user.id,
+        module: "rxvox",
+        action: "Medicine slip scanned",
+        metadata: {
+          medicine_count: parsedMedicines.length,
+        },
+      })
+
+      await createNotification(supabase, {
+        userId: user.id,
+        title: "Rx Processed",
+        message: `${parsedMedicines.length} medicines extracted from your prescription scan.`,
+        kind: "info",
+        relatedTable: "rx_scans",
+        relatedId: insertRes.data?.id,
+      })
+
+      setMedicines(parsedMedicines)
+      setProgress(100)
     } catch (err) {
-      console.error(err)
+      console.error("Rx-Vox processing failed:", err)
+      setErrorMessage("Unable to extract medicines right now. Please retry.")
+      setProgress(0)
     } finally {
       setProcessing(false)
     }
@@ -171,37 +229,24 @@ export default function RxVoxPage() {
       if (synthRef.current) {
         synthRef.current.cancel()
       }
-    } catch (e) {
-      console.error("stopSpeech failed", e)
+    } catch {
+      // no-op
     }
     utterRef.current = null
   }
 
   const speakText = (text: string, langCode: string) => {
-    if (!synthRef.current) {
-      console.error("SpeechSynthesis not available in this browser")
-      return
-    }
+    if (!synthRef.current) return
 
     stopSpeech()
 
     const utter = new SpeechSynthesisUtterance(text)
     utter.lang = languageMap[langCode] || langCode
-    utter.onend = () => {
-      setPlayingIndex(null)
-    }
-    utter.onerror = (e) => {
-      console.error("TTS error", e)
-      setPlayingIndex(null)
-    }
+    utter.onend = () => setPlayingIndex(null)
+    utter.onerror = () => setPlayingIndex(null)
 
     utterRef.current = utter
-    try {
-      synthRef.current.speak(utter)
-    } catch (e) {
-      console.error("speak failed", e)
-      setPlayingIndex(null)
-    }
+    synthRef.current.speak(utter)
   }
 
   const togglePlay = (index: number) => {
@@ -214,11 +259,8 @@ export default function RxVoxPage() {
     }
 
     setPlayingIndex(index)
-
     const med = medicines[index]
-    const textParts = [med.name, med.dosage, med.frequency, med.duration, med.instructions].filter(Boolean)
-    const text = textParts.join('. ')
-
+    const text = [med.name, med.dosage, med.frequency, med.duration, med.instructions].filter(Boolean).join(". ")
     speakText(text, language)
   }
 
@@ -228,6 +270,7 @@ export default function RxVoxPage() {
     setMedicines(null)
     setProgress(0)
     setPlayingIndex(null)
+    setErrorMessage("")
   }
 
   return (
@@ -238,7 +281,6 @@ export default function RxVoxPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
-        {/* Upload Section */}
         <div className="lg:col-span-2">
           <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
             <CardHeader>
@@ -259,21 +301,12 @@ export default function RxVoxPage() {
                     <p className="text-sm font-medium text-foreground">Upload Prescription</p>
                     <p className="mt-1 text-xs text-muted-foreground">Drop image or click to browse</p>
                   </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
+                  <input type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
                 </label>
               ) : (
                 <div className="flex flex-col gap-4">
                   <div className="relative overflow-hidden rounded-xl border border-border/50">
-                    <img
-                      src={preview}
-                      alt="Prescription"
-                      className="h-48 w-full object-cover"
-                    />
+                    <img src={preview} alt="Prescription" className="h-48 w-full object-cover" />
                     <button
                       onClick={resetAll}
                       className="absolute top-2 right-2 rounded-full bg-background/80 p-1 backdrop-blur-sm hover:bg-background"
@@ -286,6 +319,13 @@ export default function RxVoxPage() {
                     <ImageIcon className="size-4" />
                     <span className="truncate">{file?.name}</span>
                   </div>
+
+                  {errorMessage ? (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
+                      {errorMessage}
+                    </div>
+                  ) : null}
+
                   {processing ? (
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-sm text-primary">
@@ -303,7 +343,6 @@ export default function RxVoxPage() {
                 </div>
               )}
 
-              {/* Language Selector */}
               <div className="flex flex-col gap-2 pt-2">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                   <Globe className="size-3" />
@@ -329,7 +368,6 @@ export default function RxVoxPage() {
           </Card>
         </div>
 
-        {/* Results Section */}
         <div className="lg:col-span-3">
           {medicines ? (
             <div className="flex flex-col gap-4">
@@ -354,7 +392,7 @@ export default function RxVoxPage() {
                     </TableHeader>
                     <TableBody>
                       {medicines.map((med, i) => (
-                        <TableRow key={i} className="border-border/30 hover:bg-secondary/30">
+                        <TableRow key={`${med.name}-${i}`} className="border-border/30 hover:bg-secondary/30">
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Pill className="size-4 text-primary" />
@@ -386,11 +424,7 @@ export default function RxVoxPage() {
                               onClick={() => togglePlay(i)}
                               className={playingIndex === i ? "bg-primary text-primary-foreground" : ""}
                             >
-                              {playingIndex === i ? (
-                                <Pause className="size-3" />
-                              ) : (
-                                <Play className="size-3" />
-                              )}
+                              {playingIndex === i ? <Pause className="size-3" /> : <Play className="size-3" />}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -400,9 +434,8 @@ export default function RxVoxPage() {
                 </CardContent>
               </Card>
 
-              {/* Instruction details */}
               {medicines.map((med, i) => (
-                <Card key={i} className="border-border/50 bg-card/60 backdrop-blur-sm">
+                <Card key={`${med.name}-instruction-${i}`} className="border-border/50 bg-card/60 backdrop-blur-sm">
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3">
                       <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
@@ -413,12 +446,7 @@ export default function RxVoxPage() {
                         <p className="text-xs text-muted-foreground">{med.instructions}</p>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => togglePlay(i)}
-                      className="gap-1.5"
-                    >
+                    <Button size="sm" variant="outline" onClick={() => togglePlay(i)} className="gap-1.5">
                       <Volume2 className="size-3" />
                       {playingIndex === i ? "Playing..." : "Play"}
                     </Button>

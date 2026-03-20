@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -19,6 +19,8 @@ import {
   MessageSquare,
   FileText,
 } from "lucide-react"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { createActivityLog, createNotification, uploadFileForUser } from "@/lib/supabase/app-data"
 
 type MedicalSummary = {
   language: string
@@ -29,29 +31,6 @@ type MedicalSummary = {
   carePlan: string[]
   nextSteps: string
   simpleSummary?: string
-}
-
-const mockSummary: MedicalSummary = {
-  language: "Hindi",
-  mainIssue: "Stomach pain for 3 days with nausea",
-  symptoms: [
-    "Sharp pain in lower right abdomen",
-    "Nausea and occasional vomiting",
-    "Low-grade fever (99.8F)",
-    "Loss of appetite",
-    "Difficulty sleeping due to pain",
-  ],
-  history: "No previous surgery. Similar pain happened 6 months ago and improved with medicines.",
-  riskNotes: "Signs may suggest appendix irritation. Seek urgent scan and blood tests at the nearest hospital.",
-  carePlan: [
-    "Avoid heavy food until professional review",
-    "Give clean drinking water in small sips",
-    "Paracetamol for pain/fever as advised",
-    "Get abdomen ultrasound soon",
-    "Do basic blood tests",
-    "Move to district hospital if pain increases",
-  ],
-  nextSteps: "Observe for 4-6 hours. If fever rises, vomiting continues, or pain worsens, go to emergency immediately.",
 }
 
 function AudioWaveform({ isRecording }: { isRecording: boolean }) {
@@ -78,10 +57,14 @@ function AudioWaveform({ isRecording }: { isRecording: boolean }) {
 }
 
 export default function ScribePage() {
+  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
   const [isRecording, setIsRecording] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [summary, setSummary] = useState<MedicalSummary | null>(null)
   const [translateLang, setTranslateLang] = useState("en")
+  const [errorMessage, setErrorMessage] = useState("")
+  const [userId, setUserId] = useState<string | null>(null)
+
   const waveformInterval = useRef<ReturnType<typeof setInterval> | null>(null)
   const [, setTick] = useState(0)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -89,20 +72,75 @@ export default function ScribePage() {
   const streamRef = useRef<MediaStream | null>(null)
   const lastMimeRef = useRef<string | null>(null)
 
+  const loadLatestEntry = useCallback(async () => {
+    if (!supabase) return
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+    setUserId(user.id)
+
+    const { data } = await supabase
+      .from("scribe_entries")
+      .select("language,main_issue,symptoms,history,risk_notes,care_plan,next_steps,simple_summary")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (!data) return
+
+    setSummary({
+      language: data.language || "Unknown",
+      mainIssue: data.main_issue || "",
+      symptoms: Array.isArray(data.symptoms) ? (data.symptoms as string[]) : [],
+      history: data.history || "",
+      riskNotes: data.risk_notes || "",
+      carePlan: Array.isArray(data.care_plan) ? (data.care_plan as string[]) : [],
+      nextSteps: data.next_steps || "",
+      simpleSummary: data.simple_summary || undefined,
+    })
+  }, [supabase])
+
+  useEffect(() => {
+    void loadLatestEntry()
+  }, [loadLatestEntry])
+
+  useEffect(() => {
+    if (!supabase || !userId) return
+
+    const channel = supabase
+      .channel(`scribe-live-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "scribe_entries", filter: `user_id=eq.${userId}` },
+        () => void loadLatestEntry()
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [loadLatestEntry, supabase, userId])
+
   useEffect(() => {
     if (isRecording) {
       waveformInterval.current = setInterval(() => setTick((t) => t + 1), 150)
     } else if (waveformInterval.current) {
       clearInterval(waveformInterval.current)
     }
+
     return () => {
       if (waveformInterval.current) clearInterval(waveformInterval.current)
-      // stop any active recording/stream when component unmounts
       try {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
           mediaRecorderRef.current.stop()
         }
-      } catch (e) {}
+      } catch {
+        // no-op
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop())
         streamRef.current = null
@@ -110,152 +148,184 @@ export default function ScribePage() {
     }
   }, [isRecording])
 
+  const saveSummary = useCallback(
+    async (userIdValue: string, parsedSummary: MedicalSummary, audioFile: File) => {
+      if (!supabase) return
+
+      const uploaded = await uploadFileForUser(supabase, "scribe-audio", userIdValue, audioFile)
+
+      const insertRes = await supabase
+        .from("scribe_entries")
+        .insert({
+          user_id: userIdValue,
+          audio_path: uploaded.path,
+          audio_url: uploaded.publicUrl,
+          language: parsedSummary.language,
+          main_issue: parsedSummary.mainIssue,
+          symptoms: parsedSummary.symptoms,
+          history: parsedSummary.history,
+          risk_notes: parsedSummary.riskNotes,
+          care_plan: parsedSummary.carePlan,
+          next_steps: parsedSummary.nextSteps,
+          simple_summary: parsedSummary.simpleSummary,
+        })
+        .select("id")
+        .single()
+
+      await createActivityLog(supabase, {
+        userId: userIdValue,
+        module: "scribe",
+        action: "Voice note converted to summary",
+        metadata: {
+          language: parsedSummary.language,
+          symptoms: parsedSummary.symptoms.length,
+        },
+      })
+
+      await createNotification(supabase, {
+        userId: userIdValue,
+        title: "Health Notes Ready",
+        message: `Your ${parsedSummary.language} note has been converted to a structured summary.`,
+        kind: "info",
+        relatedTable: "scribe_entries",
+        relatedId: insertRes.data?.id,
+      })
+    },
+    [supabase]
+  )
+
+  const processAudio = useCallback(
+    async (audioFile: File) => {
+      if (!supabase) {
+        setErrorMessage("Supabase is not configured.")
+        return
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        setErrorMessage("Please sign in again.")
+        return
+      }
+
+      setProcessing(true)
+      setErrorMessage("")
+
+      try {
+        const formData = new FormData()
+        formData.append("audio", audioFile, audioFile.name)
+
+        const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api"
+        const res = await fetch(`${API_BASE}/scribe`, { method: "POST", body: formData })
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => "")
+          throw new Error(`Server responded ${res.status}: ${text}`)
+        }
+
+        const data = await res.json()
+        const backendSummary = data?.summary ?? {}
+
+        const parsedSummary: MedicalSummary = {
+          language: backendSummary.language || "Unknown",
+          mainIssue: backendSummary.mainIssue || "",
+          symptoms: Array.isArray(backendSummary.symptoms) ? backendSummary.symptoms : [],
+          history: backendSummary.history || "",
+          riskNotes: backendSummary.riskNotes || "",
+          carePlan: Array.isArray(backendSummary.carePlan) ? backendSummary.carePlan : [],
+          nextSteps: backendSummary.nextSteps || "",
+          simpleSummary: backendSummary.simpleSummary,
+        }
+
+        await saveSummary(user.id, parsedSummary, audioFile)
+        setSummary(parsedSummary)
+      } catch (error) {
+        console.error("Scribe processing failed:", error)
+        setErrorMessage("Unable to process audio right now. Please retry.")
+      } finally {
+        setProcessing(false)
+      }
+    },
+    [saveSummary, supabase]
+  )
+
   const handleRecord = async () => {
-    // Toggle recording: start -> request mic and start MediaRecorder; stop -> finalize and send
     try {
       if (isRecording) {
-        // stop
         setIsRecording(false)
-        setProcessing(true)
 
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
           mediaRecorderRef.current.stop()
         }
 
-        // ensure stream tracks stopped
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((t) => t.stop())
           streamRef.current = null
         }
 
-        // small delay to let MediaRecorder flush
-        await new Promise((r) => setTimeout(r, 250))
+        await new Promise((resolve) => setTimeout(resolve, 250))
 
-        const mime = lastMimeRef.current || (mediaRecorderRef.current && (mediaRecorderRef.current as any).mimeType) || "audio/webm"
+        const mime = lastMimeRef.current || mediaRecorderRef.current?.mimeType || "audio/webm"
         const ext = mime.includes("webm") ? "webm" : mime.includes("wav") ? "wav" : "dat"
         const blob = new Blob(audioChunks.current, { type: mime })
-
-        const formData = new FormData()
-        formData.append("audio", blob, `recording.${ext}`)
-
-        const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api"
-        const res = await fetch(`${API_BASE}/scribe`, {
-          method: "POST",
-          body: formData,
-        })
-
-        if (!res.ok) {
-          let text = ""
-          try {
-            text = await res.text()
-          } catch (e) {
-            text = ""
-          }
-          const snippet = typeof text === "string" && text.length ? text.slice(0, 300) : String(text)
-          console.error("/api/scribe returned error:", res.status, snippet)
-          // fallback to mock summary when backend fails
-          setSummary(mockSummary)
-          setProcessing(false)
-          audioChunks.current = []
-          return
-        }
-
-        let data: any = null
-        try {
-          data = await res.json()
-        } catch (e) {
-          // If response isn't JSON, fallback
-          console.error("/api/scribe: failed to parse JSON response", e)
-          setSummary(mockSummary)
-          setProcessing(false)
-          audioChunks.current = []
-          return
-        }
-
-        setSummary(data?.summary ?? mockSummary)
-        setProcessing(false)
         audioChunks.current = []
+
+        const recordedFile = new File([blob], `recording-${Date.now()}.${ext}`, { type: mime })
+        await processAudio(recordedFile)
       } else {
-        // start
         setSummary(null)
-        setProcessing(false)
-        try {
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw new Error("Microphone not supported in this browser")
-          }
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-          streamRef.current = stream
+        setErrorMessage("")
 
-          let recorder: MediaRecorder
-
-          try {
-            recorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" })
-          } catch (e) {
-            try {
-              recorder = new MediaRecorder(stream, { mimeType: "audio/webm" })
-            } catch (e2) {
-              recorder = new MediaRecorder(stream)
-            }
-          }
-
-          audioChunks.current = []
-          lastMimeRef.current = (recorder as any).mimeType || null
-          recorder.ondataavailable = (ev: BlobEvent) => {
-            if (ev.data && ev.data.size > 0) audioChunks.current.push(ev.data)
-            // keep last known mime
-            try {
-              lastMimeRef.current = (recorder as any).mimeType || lastMimeRef.current
-            } catch (e) {}
-          }
-
-          recorder.onerror = (err) => console.error("MediaRecorder error:", err)
-          recorder.start()
-          mediaRecorderRef.current = recorder
-          setIsRecording(true)
-        } catch (err) {
-          console.error("Failed to start recording:", err)
-          setIsRecording(false)
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("Microphone access is not supported in this browser")
         }
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        streamRef.current = stream
+
+        let recorder: MediaRecorder
+        try {
+          recorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" })
+        } catch {
+          try {
+            recorder = new MediaRecorder(stream, { mimeType: "audio/webm" })
+          } catch {
+            recorder = new MediaRecorder(stream)
+          }
+        }
+
+        audioChunks.current = []
+        lastMimeRef.current = recorder.mimeType || null
+        recorder.ondataavailable = (event: BlobEvent) => {
+          if (event.data && event.data.size > 0) {
+            audioChunks.current.push(event.data)
+          }
+        }
+        recorder.start()
+
+        mediaRecorderRef.current = recorder
+        setIsRecording(true)
       }
-    } catch (err) {
-      console.error("Record handler error:", err)
-      setProcessing(false)
+    } catch (error) {
+      console.error("Recording failed:", error)
       setIsRecording(false)
+      setProcessing(false)
+      setErrorMessage("Could not access microphone. Please check permission and try again.")
     }
   }
 
-    const handleUpload = () => {
-        // trigger hidden file input
-        const el = document.getElementById("scribe-upload-input") as HTMLInputElement | null
-        el?.click()
-    }
+  const handleUpload = () => {
+    const input = document.getElementById("scribe-upload-input") as HTMLInputElement | null
+    input?.click()
+  }
 
-    const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (!file) return
-      setProcessing(true)
-
-      const formData = new FormData()
-      formData.append("audio", file, file.name)
-
-      const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api"
-      try {
-        const res = await fetch(`${API_BASE}/scribe`, { method: "POST", body: formData })
-        if (!res.ok) {
-          console.error("/api/scribe returned", res.status)
-          setSummary(mockSummary)
-          setProcessing(false)
-          return
-        }
-        const data = await res.json().catch(() => null)
-        setSummary(data?.summary ?? mockSummary)
-      } catch (err) {
-        console.error("Upload failed:", err)
-        setSummary(mockSummary)
-      } finally {
-        setProcessing(false)
-      }
-    }
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    if (!selectedFile) return
+    await processAudio(selectedFile)
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -265,19 +335,16 @@ export default function ScribePage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recording Section */}
         <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-card-foreground">Audio Input</CardTitle>
             <CardDescription>Record a health voice note or upload an audio file</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
-            {/* Waveform */}
             <div className="rounded-xl border border-border/50 bg-secondary/20 p-6">
               <AudioWaveform isRecording={isRecording} />
             </div>
 
-            {/* Controls */}
             <div className="flex items-center justify-center gap-4">
               <Button
                 size="lg"
@@ -307,6 +374,7 @@ export default function ScribePage() {
               <Upload className="mr-2 size-4" />
               Upload Audio File
             </Button>
+            <input id="scribe-upload-input" type="file" accept="audio/*" className="hidden" onChange={handleFileSelected} />
 
             {processing && (
               <div className="flex items-center justify-center gap-2 text-primary">
@@ -314,6 +382,12 @@ export default function ScribePage() {
                 <span className="text-sm">Processing audio...</span>
               </div>
             )}
+
+            {errorMessage ? (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
+                {errorMessage}
+              </div>
+            ) : null}
 
             {summary && (
               <div className="flex items-center justify-between rounded-lg bg-primary/10 p-3">
@@ -327,10 +401,8 @@ export default function ScribePage() {
           </CardContent>
         </Card>
 
-        {/* Summary Output */}
         {summary ? (
           <div className="flex flex-col gap-4">
-            {/* Header actions */}
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground">Medical Summary</h2>
               <div className="flex items-center gap-2">
@@ -354,7 +426,6 @@ export default function ScribePage() {
               </div>
             </div>
 
-            {/* Simple summary */}
             {summary.simpleSummary && (
               <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
                 <CardContent className="flex items-start gap-3 p-4">
@@ -366,7 +437,6 @@ export default function ScribePage() {
               </Card>
             )}
 
-            {/* Main issue */}
             <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardContent className="flex items-start gap-3 p-4">
                 <MessageSquare className="mt-0.5 size-4 text-primary shrink-0" />
@@ -377,7 +447,6 @@ export default function ScribePage() {
               </CardContent>
             </Card>
 
-            {/* Symptoms */}
             <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardContent className="flex flex-col gap-2 p-4">
                 <div className="flex items-center gap-2">
@@ -395,7 +464,6 @@ export default function ScribePage() {
               </CardContent>
             </Card>
 
-            {/* History */}
             <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardContent className="flex items-start gap-3 p-4">
                 <FileText className="mt-0.5 size-4 text-chart-3 shrink-0" />
@@ -406,7 +474,6 @@ export default function ScribePage() {
               </CardContent>
             </Card>
 
-            {/* Risk notes */}
             <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardContent className="flex items-start gap-3 p-4">
                 <Stethoscope className="mt-0.5 size-4 text-warning shrink-0" />
@@ -417,7 +484,6 @@ export default function ScribePage() {
               </CardContent>
             </Card>
 
-            {/* Care plan */}
             <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardContent className="flex flex-col gap-2 p-4">
                 <div className="flex items-center gap-2">
@@ -437,7 +503,6 @@ export default function ScribePage() {
               </CardContent>
             </Card>
 
-            {/* Next steps */}
             <Card className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardContent className="flex items-start gap-3 p-4">
                 <Calendar className="mt-0.5 size-4 text-chart-5 shrink-0" />

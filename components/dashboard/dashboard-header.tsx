@@ -1,5 +1,6 @@
 "use client"
 
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Bell, CalendarDays, Search, Siren, Sparkles } from "lucide-react"
@@ -13,13 +14,80 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+
+type NotificationRow = {
+  id: string
+  title: string
+  message: string
+  is_read: boolean
+}
 
 export function DashboardHeader() {
+  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
+  const [notifications, setNotifications] = useState<NotificationRow[]>([])
+  const [urgentCount, setUrgentCount] = useState(0)
+
   const today = new Date().toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   })
+
+  const loadHeaderData = useCallback(async () => {
+    if (!supabase) return
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return
+
+    const [notificationRes, traumaRes] = await Promise.all([
+      supabase
+        .from("notifications")
+        .select("id,title,message,is_read")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(6),
+      supabase.from("trauma_checks").select("id,urgency").eq("user_id", user.id),
+    ])
+
+    setNotifications((notificationRes.data ?? []) as NotificationRow[])
+
+    const traumaRows = traumaRes.data ?? []
+    setUrgentCount(traumaRows.filter((row) => row.urgency === "high" || row.urgency === "critical").length)
+  }, [supabase])
+
+  useEffect(() => {
+    void loadHeaderData()
+  }, [loadHeaderData])
+
+  useEffect(() => {
+    if (!supabase) return
+
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
+    const subscribe = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
+
+      channel = supabase
+        .channel(`header-live-${user.id}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => void loadHeaderData())
+        .on("postgres_changes", { event: "*", schema: "public", table: "trauma_checks", filter: `user_id=eq.${user.id}` }, () => void loadHeaderData())
+        .subscribe()
+    }
+
+    void subscribe()
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
+    }
+  }, [loadHeaderData, supabase])
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-primary/10 bg-background/70 px-4 backdrop-blur-xl md:px-6">
@@ -55,7 +123,7 @@ export function DashboardHeader() {
 
         <div className="hidden items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground lg:flex">
           <Siren className="size-4" />
-          1 urgent case needs attention
+          {urgentCount} urgent case{urgentCount === 1 ? "" : "s"} need{urgentCount === 1 ? "s" : ""} attention
         </div>
 
         <DropdownMenu>
@@ -63,7 +131,7 @@ export function DashboardHeader() {
             <Button variant="ghost" size="icon" className="relative rounded-xl hover:bg-primary/10">
               <Bell className="size-4" />
               <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground font-medium">
-                3
+                {notifications.filter((item) => !item.is_read).length}
               </span>
               <span className="sr-only">Notifications</span>
             </Button>
@@ -71,21 +139,21 @@ export function DashboardHeader() {
           <DropdownMenuContent align="end" className="w-72">
             <div className="flex items-center justify-between px-3 py-2">
               <span className="text-sm font-medium text-foreground">Notifications</span>
-              <Badge variant="secondary" className="text-xs">3 new</Badge>
+              <Badge variant="secondary" className="text-xs">{notifications.filter((item) => !item.is_read).length} new</Badge>
             </div>
             <Separator />
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <span className="text-sm font-medium text-foreground">Urgent Injury Alert</span>
-              <span className="text-xs text-muted-foreground">New high-risk injury needs quick help</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <span className="text-sm font-medium text-foreground">Health Notes Ready</span>
-              <span className="text-xs text-muted-foreground">Hindi voice note converted to summary</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <span className="text-sm font-medium text-foreground">Rx Processed</span>
-              <span className="text-xs text-muted-foreground">3 medicines extracted from scan</span>
-            </DropdownMenuItem>
+            {notifications.length > 0 ? (
+              notifications.map((item) => (
+                <DropdownMenuItem key={item.id} className="flex flex-col items-start gap-1 py-3">
+                  <span className="text-sm font-medium text-foreground">{item.title}</span>
+                  <span className="text-xs text-muted-foreground">{item.message}</span>
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
+                <span className="text-sm text-muted-foreground">No notifications yet.</span>
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

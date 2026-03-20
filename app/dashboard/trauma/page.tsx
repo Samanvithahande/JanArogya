@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,8 @@ import {
   Package,
   X,
 } from "lucide-react"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { createActivityLog, createNotification, uploadFileForUser } from "@/lib/supabase/app-data"
 
 type AnalysisResult = {
   severity: number
@@ -25,26 +27,6 @@ type AnalysisResult = {
   actions: string[]
   equipment: string[]
   notes: string
-}
-
-const mockResult: AnalysisResult = {
-  severity: 7,
-  urgency: "high",
-  actions: [
-    "Apply direct pressure to control bleeding",
-    "Immobilize the affected limb",
-    "Monitor vital signs every 5 minutes",
-    "Prepare for emergency transport",
-    "Administer pain management per protocol",
-  ],
-  equipment: [
-    "Sterile gauze pads",
-    "Elastic bandage",
-    "Splint kit",
-    "Pulse oximeter",
-    "IV access kit",
-  ],
-  notes: "Possible bone injury with active bleeding. Keep the limb stable and move to the nearest emergency center quickly.",
 }
 
 function getUrgencyColor(urgency: string) {
@@ -64,11 +46,64 @@ function getSeverityColor(score: number) {
 
 export default function TraumaTriagePage() {
   const router = useRouter()
+  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState("")
+
+  const loadLatestResult = useCallback(async () => {
+    if (!supabase) return
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+    setUserId(user.id)
+
+    const { data } = await supabase
+      .from("trauma_checks")
+      .select("severity,urgency,actions,equipment,diagnosis")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (!data) return
+
+    setResult({
+      severity: Number(data.severity || 0),
+      urgency: data.urgency,
+      actions: Array.isArray(data.actions) ? (data.actions as string[]) : [],
+      equipment: Array.isArray(data.equipment) ? (data.equipment as string[]) : [],
+      notes: data.diagnosis || "",
+    })
+  }, [supabase])
+
+  useEffect(() => {
+    void loadLatestResult()
+  }, [loadLatestResult])
+
+  useEffect(() => {
+    if (!supabase || !userId) return
+
+    const channel = supabase
+      .channel(`trauma-live-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "trauma_checks", filter: `user_id=eq.${userId}` },
+        () => void loadLatestResult()
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [loadLatestResult, supabase, userId])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -91,9 +126,26 @@ export default function TraumaTriagePage() {
 
 const handleAnalyze = useCallback(async () => {
   if (!file) return
+  setErrorMessage("")
 
   setAnalyzing(true)
   setProgress(20)
+
+  if (!supabase) {
+    setErrorMessage("Supabase is not configured.")
+    setAnalyzing(false)
+    return
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    setErrorMessage("Please sign in again.")
+    setAnalyzing(false)
+    return
+  }
 
   try {
     const formData = new FormData()
@@ -124,15 +176,53 @@ const handleAnalyze = useCallback(async () => {
       notes: data.diagnosis || "No diagnosis available"
     }
 
+    const uploaded = await uploadFileForUser(supabase, "trauma-images", user.id, file)
+
+    const insertRes = await supabase.from("trauma_checks").insert({
+      user_id: user.id,
+      image_path: uploaded.path,
+      image_url: uploaded.publicUrl,
+      severity: mappedResult.severity,
+      urgency: mappedResult.urgency,
+      actions: mappedResult.actions,
+      equipment: mappedResult.equipment,
+      diagnosis: mappedResult.notes,
+    }).select("id").single()
+
+    const insertedId = insertRes.data?.id as string | undefined
+
+    await createActivityLog(supabase, {
+      userId: user.id,
+      module: "trauma",
+      action: "Injury safety check completed",
+      metadata: {
+        severity: mappedResult.severity,
+        urgency: mappedResult.urgency,
+      },
+    })
+
+    if (mappedResult.urgency === "high" || mappedResult.urgency === "critical") {
+      await createNotification(supabase, {
+        userId: user.id,
+        title: "Urgent Injury Alert",
+        message: `Severity ${mappedResult.severity}/10 requires quick attention.`,
+        kind: "urgent",
+        relatedTable: "trauma_checks",
+        relatedId: insertedId,
+      })
+    }
+
     setResult(mappedResult)
 
   } catch (error) {
     console.error("Analysis failed:", error)
+    const message = error instanceof Error ? error.message : "Unable to process injury check right now. Please retry."
+    setErrorMessage(message)
   } finally {
     setAnalyzing(false)
   }
 
-}, [file])
+}, [file, supabase])
 
   const resetAll = () => {
     setFile(null)
@@ -197,6 +287,12 @@ const handleAnalyze = useCallback(async () => {
                   <span className="truncate">{file?.name}</span>
                   <span className="ml-auto text-xs">{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : ""}</span>
                 </div>
+
+                {errorMessage ? (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">
+                    {errorMessage}
+                  </div>
+                ) : null}
 
                 {analyzing ? (
                   <div className="flex flex-col gap-3">

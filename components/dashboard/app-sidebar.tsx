@@ -57,6 +57,8 @@ export function AppSidebar() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
   const [displayName, setDisplayName] = useState("Loading...")
   const [displayRole, setDisplayRole] = useState("Personal Account")
+  const [entryCountToday, setEntryCountToday] = useState(0)
+  const [urgentQueueCount, setUrgentQueueCount] = useState(0)
 
   useEffect(() => {
     if (!supabase) {
@@ -83,6 +85,25 @@ export function AppSidebar() {
 
       setDisplayName(resolvedName)
       setDisplayRole(role === "self" ? "Personal Account" : role || "Personal Account")
+
+      const dayStart = new Date()
+      dayStart.setHours(0, 0, 0, 0)
+
+      const [todayRes, urgentRes] = await Promise.all([
+        supabase
+          .from("activity_logs")
+          .select("id")
+          .eq("user_id", user.id)
+          .gte("created_at", dayStart.toISOString()),
+        supabase
+          .from("trauma_checks")
+          .select("id")
+          .eq("user_id", user.id)
+          .in("urgency", ["high", "critical"]),
+      ])
+
+      setEntryCountToday((todayRes.data ?? []).length)
+      setUrgentQueueCount((urgentRes.data ?? []).length)
     }
 
     void loadUser()
@@ -131,7 +152,7 @@ export function AppSidebar() {
             <Sparkles className="size-3.5" />
             Shift Pulse
           </div>
-          <p className="text-xs text-sidebar-foreground/80">Entries today: 46 | Urgent queue: 1</p>
+          <p className="text-xs text-sidebar-foreground/80">Entries today: {entryCountToday} | Urgent queue: {urgentQueueCount}</p>
         </div>
       </SidebarHeader>
 

@@ -1,32 +1,70 @@
 "use client"
 
-import Link from "next/link"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { PhoneCall, MapPin, Shield, LifeBuoy, Users } from "lucide-react"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
-const contacts = {
-  emergencyServices: [
-    { name: "Police", phone: "+91-100" },
-    { name: "Fire", phone: "+91-101" },
-    { name: "Ambulance", phone: "+91-102" },
-  ],
-  hospitals: [
-    { name: "District Hospital", phone: "+91-98765-43210" },
-    { name: "Taluk Government Hospital", phone: "+91-91234-56780" },
-    { name: "Nearest Emergency Center", phone: "+91-90000-11223" },
-  ],
-  poisonControl: [
-    { name: "National Poison Control", phone: "+91-80000-12345" },
-  ],
-  helplines: [
-    { name: "Mental Health Helpline", phone: "+91-91522-12345" },
-    { name: "Women Helpline", phone: "+91-78290-00000" },
-    { name: "Child Helpline", phone: "+91-1098" },
-  ],
+type Contact = {
+  id: string
+  category: "emergency_services" | "hospitals" | "poison_control" | "helplines"
+  name: string
+  phone: string
 }
 
 export default function EmergencyContactsPage() {
+  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadContacts = useCallback(async () => {
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      setLoading(false)
+      return
+    }
+
+    const { data } = await supabase
+      .from("emergency_contacts")
+      .select("id,category,name,phone,is_global,user_id")
+      .or(`is_global.eq.true,user_id.eq.${user.id}`)
+      .order("created_at", { ascending: true })
+
+    setContacts((data ?? []) as Contact[])
+    setLoading(false)
+  }, [supabase])
+
+  useEffect(() => {
+    void loadContacts()
+  }, [loadContacts])
+
+  useEffect(() => {
+    if (!supabase) return
+
+    const channel = supabase
+      .channel("emergency-contacts-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "emergency_contacts" }, () => void loadContacts())
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [loadContacts, supabase])
+
+  const emergencyServices = contacts.filter((item) => item.category === "emergency_services")
+  const hospitals = contacts.filter((item) => item.category === "hospitals")
+  const poisonControl = contacts.filter((item) => item.category === "poison_control")
+  const helplines = contacts.filter((item) => item.category === "helplines")
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -42,7 +80,7 @@ export default function EmergencyContactsPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3">
-              {contacts.emergencyServices.map((c) => (
+              {emergencyServices.map((c) => (
                 <a key={c.name} href={`tel:${c.phone}`} className="flex items-center justify-between rounded-md p-3 hover:bg-secondary/10">
                   <div className="flex items-center gap-3">
                     <Shield className="size-4 text-destructive-foreground" />
@@ -65,7 +103,7 @@ export default function EmergencyContactsPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3">
-              {contacts.hospitals.map((c) => (
+              {hospitals.map((c) => (
                 <a key={c.name} href={`tel:${c.phone}`} className="flex items-center justify-between rounded-md p-3 hover:bg-secondary/10">
                   <div className="flex items-center gap-3">
                     <Users className="size-4 text-primary" />
@@ -88,7 +126,7 @@ export default function EmergencyContactsPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3">
-              {contacts.poisonControl.map((c) => (
+              {poisonControl.map((c) => (
                 <a key={c.name} href={`tel:${c.phone}`} className="flex items-center justify-between rounded-md p-3 hover:bg-secondary/10">
                   <div className="flex items-center gap-3">
                     <LifeBuoy className="size-4 text-warning-foreground" />
@@ -111,7 +149,7 @@ export default function EmergencyContactsPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3">
-              {contacts.helplines.map((c) => (
+              {helplines.map((c) => (
                 <a key={c.name} href={`tel:${c.phone}`} className="flex items-center justify-between rounded-md p-3 hover:bg-secondary/10">
                   <div className="flex items-center gap-3">
                     <Users className="size-4 text-chart-2" />
@@ -123,6 +161,8 @@ export default function EmergencyContactsPage() {
                   <Button variant="ghost" size="sm">Call</Button>
                 </a>
               ))}
+
+              {loading ? <p className="text-xs text-muted-foreground px-2">Loading contacts...</p> : null}
             </div>
           </CardContent>
         </Card>

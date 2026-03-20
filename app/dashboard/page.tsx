@@ -1,5 +1,6 @@
 "use client"
 
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -26,72 +27,29 @@ import {
   Users,
   Volume2,
 } from "lucide-react"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { ensureUserProfile } from "@/lib/supabase/app-data"
 
-const stats = [
-  {
-    title: "My Checks Today",
-    value: "46",
-    trend: "+9% vs yesterday",
-    icon: Users,
-    chip: "bg-primary/15 text-primary",
-  },
-  {
-    title: "My Avg Check Time",
-    value: "02:18",
-    trend: "-24 sec improvement",
-    icon: Timer,
-    chip: "bg-emerald-500/15 text-emerald-300",
-  },
-  {
-    title: "Open Critical Cases",
-    value: "1",
-    trend: "needs immediate review",
-    icon: CircleAlert,
-    chip: "bg-destructive/15 text-destructive-foreground",
-  },
-  {
-    title: "Medication Audio Plays",
-    value: "183",
-    trend: "+14% engagement",
-    icon: AudioLines,
-    chip: "bg-chart-3/15 text-chart-3",
-  },
-]
+type StatCard = {
+  title: string
+  value: string
+  trend: string
+  icon: typeof Users
+  chip: string
+}
 
-const recentQueue = [
-  {
-    id: "T-1042",
-    type: "Trauma",
-    person: "Asha K.",
-    severity: "High",
-    location: "Ward 3",
-    time: "12 min ago",
-  },
-  {
-    id: "S-2891",
-    type: "Scribe",
-    person: "Ravi N.",
-    severity: "Medium",
-    location: "OPD 2",
-    time: "34 min ago",
-  },
-  {
-    id: "R-0912",
-    type: "Rx-Vox",
-    person: "Fatima B.",
-    severity: "Low",
-    location: "Pharmacy",
-    time: "1 hr ago",
-  },
-  {
-    id: "T-1041",
-    type: "Trauma",
-    person: "Mahesh P.",
-    severity: "Critical",
-    location: "Emergency",
-    time: "2 hr ago",
-  },
-]
+type QueueItem = {
+  id: string
+  type: string
+  person: string
+  severity: string
+  location: string
+  time: string
+}
+
+type QueueItemWithTimestamp = QueueItem & {
+  createdAt: string
+}
 
 const quickActions = [
   {
@@ -124,7 +82,220 @@ function severityStyle(severity: string) {
   return "bg-success/15 text-success border-success/30"
 }
 
+function toRelativeTime(dateString: string) {
+  const createdAt = new Date(dateString).getTime()
+  const now = Date.now()
+  const diff = Math.max(0, now - createdAt)
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return "just now"
+  if (min < 60) return `${min} min ago`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr} hr ago`
+  const day = Math.floor(hr / 24)
+  return `${day} day ago`
+}
+
 export default function DashboardPage() {
+  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
+  const [loading, setLoading] = useState(true)
+  const [displayName, setDisplayName] = useState("User")
+  const [stats, setStats] = useState<StatCard[]>([])
+  const [recentQueue, setRecentQueue] = useState<QueueItem[]>([])
+  const [attentionText, setAttentionText] = useState("No recent high-risk entries. Keep following your care plan.")
+  const [todaySummary, setTodaySummary] = useState("No activities yet today. Start with injury check, notes, or medicine scan.")
+
+  const loadDashboard = useCallback(async () => {
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      setLoading(false)
+      return
+    }
+
+    await ensureUserProfile(supabase, user)
+
+    const profileResult = await supabase
+      .from("profiles")
+      .select("first_name,last_name,location")
+      .eq("user_id", user.id)
+      .single()
+
+    const profile = profileResult.data
+    const fullName = `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim()
+    const fallbackName = user.email?.split("@")[0] || "User"
+    setDisplayName(fullName || fallbackName)
+
+    const [traumaRes, scribeRes, rxRes] = await Promise.all([
+      supabase
+        .from("trauma_checks")
+        .select("id,urgency,severity,created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("scribe_entries")
+        .select("id,created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("rx_scans")
+        .select("id,medicines,created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ])
+
+    const traumaRows = traumaRes.data ?? []
+    const scribeRows = scribeRes.data ?? []
+    const rxRows = rxRes.data ?? []
+
+    const todayIso = new Date()
+    todayIso.setHours(0, 0, 0, 0)
+
+    const traumaToday = traumaRows.filter((row) => new Date(row.created_at) >= todayIso)
+    const scribeToday = scribeRows.filter((row) => new Date(row.created_at) >= todayIso)
+    const rxToday = rxRows.filter((row) => new Date(row.created_at) >= todayIso)
+
+    const criticalCount = traumaRows.filter((row) => row.urgency === "critical" || row.urgency === "high").length
+    const avgSeverity = traumaRows.length
+      ? (traumaRows.reduce((sum, row) => sum + Number(row.severity || 0), 0) / traumaRows.length).toFixed(1)
+      : "0.0"
+
+    const extractedMedicines = rxRows.reduce((count, row) => {
+      const meds = Array.isArray(row.medicines) ? row.medicines : []
+      return count + meds.length
+    }, 0)
+
+    setStats([
+      {
+        title: "My Checks Today",
+        value: String(traumaToday.length),
+        trend: traumaToday.length > 0 ? "updated in real time" : "no checks today",
+        icon: Users,
+        chip: "bg-primary/15 text-primary",
+      },
+      {
+        title: "My Avg Injury Score",
+        value: avgSeverity,
+        trend: traumaRows.length > 0 ? `${traumaRows.length} total injury checks` : "not available yet",
+        icon: Timer,
+        chip: "bg-emerald-500/15 text-emerald-300",
+      },
+      {
+        title: "Open Critical Cases",
+        value: String(criticalCount),
+        trend: criticalCount > 0 ? "needs immediate review" : "all clear right now",
+        icon: CircleAlert,
+        chip: "bg-destructive/15 text-destructive-foreground",
+      },
+      {
+        title: "Medicines Extracted",
+        value: String(extractedMedicines),
+        trend: rxRows.length > 0 ? `${rxRows.length} prescription scans` : "no scan records yet",
+        icon: AudioLines,
+        chip: "bg-chart-3/15 text-chart-3",
+      },
+    ])
+
+    const queue: QueueItem[] = ([
+      ...traumaRows.map((row) => ({
+        id: row.id.slice(0, 8),
+        type: "Trauma",
+        person: fullName || fallbackName,
+        severity: row.urgency.charAt(0).toUpperCase() + row.urgency.slice(1),
+        location: profile?.location || "Not set",
+        time: toRelativeTime(row.created_at),
+        createdAt: row.created_at,
+      })),
+      ...scribeRows.map((row) => ({
+        id: row.id.slice(0, 8),
+        type: "Scribe",
+        person: fullName || fallbackName,
+        severity: "Medium",
+        location: profile?.location || "Not set",
+        time: toRelativeTime(row.created_at),
+        createdAt: row.created_at,
+      })),
+      ...rxRows.map((row) => ({
+        id: row.id.slice(0, 8),
+        type: "Rx-Vox",
+        person: fullName || fallbackName,
+        severity: "Low",
+        location: profile?.location || "Not set",
+        time: toRelativeTime(row.created_at),
+        createdAt: row.created_at,
+      })),
+    ] as QueueItemWithTimestamp[])
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 8)
+      .map(({ createdAt, ...rest }) => rest)
+
+    setRecentQueue(queue)
+
+    if (criticalCount > 0) {
+      setAttentionText(`You have ${criticalCount} high-risk or critical entries. Review them and follow next-step guidance.`)
+    } else {
+      setAttentionText("No high-risk entries detected recently. Continue monitoring and keep records updated.")
+    }
+
+    setTodaySummary(
+      `${scribeToday.length} notes saved, ${rxToday.length} prescription scans, and ${traumaToday.length} injury checks today.`
+    )
+    setLoading(false)
+  }, [supabase])
+
+  useEffect(() => {
+    void loadDashboard()
+  }, [loadDashboard])
+
+  useEffect(() => {
+    if (!supabase) return
+
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
+    const subscribe = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
+
+      channel = supabase
+        .channel(`dashboard-live-${user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "trauma_checks", filter: `user_id=eq.${user.id}` },
+          () => void loadDashboard()
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "scribe_entries", filter: `user_id=eq.${user.id}` },
+          () => void loadDashboard()
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "rx_scans", filter: `user_id=eq.${user.id}` },
+          () => void loadDashboard()
+        )
+        .subscribe()
+    }
+
+    void subscribe()
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
+    }
+  }, [loadDashboard, supabase])
+
   return (
     <div className="dashboard-stack">
       <section className="dashboard-hero-card">
@@ -135,7 +306,7 @@ export default function DashboardPage() {
               My Health Today
             </div>
             <h1 className="font-display text-3xl leading-tight text-foreground md:text-4xl">
-              Welcome back, Rajan. Your personal health space is ready.
+              Welcome back, {displayName}. Your personal health space is ready.
             </h1>
             <p className="mt-3 max-w-2xl text-muted-foreground">
               Use this space to track your health notes, medicine guidance, and urgent alerts in one clear view.
@@ -163,14 +334,14 @@ export default function DashboardPage() {
                 <CircleAlert className="size-4" />
                 Attention Needed
               </div>
-              <p className="text-sm text-muted-foreground">You have 1 recent entry marked high-risk. Review it and follow the next-step guidance.</p>
+              <p className="text-sm text-muted-foreground">{attentionText}</p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-card/75 p-4">
               <div className="mb-1 flex items-center gap-2 text-sm font-medium text-foreground">
                 <Stethoscope className="size-4 text-primary" />
                 Today at a Glance
               </div>
-              <p className="text-sm text-muted-foreground">2 health notes saved, 3 medicine reminders listened, and 1 emergency contact opened today.</p>
+              <p className="text-sm text-muted-foreground">{todaySummary}</p>
             </div>
           </div>
         </div>
@@ -235,20 +406,28 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentQueue.map((item) => (
-                  <TableRow key={item.id} className="border-border/30 hover:bg-background/70">
-                    <TableCell className="font-mono text-xs text-foreground">{item.id}</TableCell>
-                    <TableCell>{item.type}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.person}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={severityStyle(item.severity)}>
-                        {item.severity}
-                      </Badge>
+                {recentQueue.length > 0 ? (
+                  recentQueue.map((item) => (
+                    <TableRow key={item.id} className="border-border/30 hover:bg-background/70">
+                      <TableCell className="font-mono text-xs text-foreground">{item.id}</TableCell>
+                      <TableCell>{item.type}</TableCell>
+                      <TableCell className="text-muted-foreground">{item.person}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={severityStyle(item.severity)}>
+                          {item.severity}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{item.location}</TableCell>
+                      <TableCell className="text-right text-xs text-muted-foreground">{item.time}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow className="border-border/30 hover:bg-background/70">
+                    <TableCell colSpan={6} className="py-6 text-center text-sm text-muted-foreground">
+                      {loading ? "Loading live records..." : "No records yet. Start with Injury Check, Health Notes, or Rx-Vox."}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{item.location}</TableCell>
-                    <TableCell className="text-right text-xs text-muted-foreground">{item.time}</TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>
