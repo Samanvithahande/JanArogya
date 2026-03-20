@@ -104,7 +104,7 @@ export default function LoginPage() {
           <CardHeader className="space-y-4 text-center">
             <Link href="/" className="mx-auto w-fit">
               <Image
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/JanArogya%20Logo%20With%20No%20Bg%20%28Black%20Bg%29-YlntpvuipivBOHdn8EOJj1uOQqnw1P.png"
+                src="/JANAROGYAA.png"
                 alt="JanArogya Logo"
                 width={170}
                 height={50}

@@ -15,7 +15,7 @@ export function LandingNavbar() {
       <nav className="mx-auto flex max-w-7xl items-center justify-between rounded-2xl border border-primary/20 bg-background/70 px-4 py-3 backdrop-blur-xl md:px-6">
         <Link href="/" className="flex items-center gap-3">
           <Image
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/JanArogya%20Logo%20With%20No%20Bg%20%28Black%20Bg%29-YlntpvuipivBOHdn8EOJj1uOQqnw1P.png"
+            src="/JANAROGYAA.png"
             alt="JanArogya Logo"
             width={140}
             height={40}
