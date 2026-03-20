@@ -55,13 +55,14 @@ export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = useMemo(() => createSupabaseBrowserClient(), [])
-  const [displayName, setDisplayName] = useState("Loading...")
+  const [displayName, setDisplayName] = useState("User")
   const [displayRole, setDisplayRole] = useState("Personal Account")
   const [entryCountToday, setEntryCountToday] = useState(0)
   const [urgentQueueCount, setUrgentQueueCount] = useState(0)
 
   useEffect(() => {
     if (!supabase) {
+      setDisplayName("User")
       return
     }
 
@@ -71,8 +72,21 @@ export function AppSidebar() {
       } = await supabase.auth.getUser()
 
       if (!user) {
+        setDisplayName("User")
+        setDisplayRole("Personal Account")
+        setEntryCountToday(0)
+        setUrgentQueueCount(0)
         return
       }
+
+      const profileRes = await supabase
+        .from("profiles")
+        .select("first_name,last_name")
+        .eq("user_id", user.id)
+        .maybeSingle()
+
+      const profile = profileRes.data
+      const profileName = `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim()
 
       const metadata = user.user_metadata ?? {}
       const fullName = (metadata.full_name as string | undefined)?.trim()
@@ -81,7 +95,8 @@ export function AppSidebar() {
       const role = (metadata.role as string | undefined)?.trim()
 
       const fallbackName = user.email?.split("@")[0] || "User"
-      const resolvedName = fullName || `${firstName || ""} ${lastName || ""}`.trim() || fallbackName
+      const metadataName = fullName || `${firstName || ""} ${lastName || ""}`.trim()
+      const resolvedName = profileName || metadataName || fallbackName
 
       setDisplayName(resolvedName)
       setDisplayRole(role === "self" ? "Personal Account" : role || "Personal Account")
@@ -107,6 +122,16 @@ export function AppSidebar() {
     }
 
     void loadUser()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      void loadUser()
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [supabase])
 
   async function handleSignOut() {
