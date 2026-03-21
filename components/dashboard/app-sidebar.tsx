@@ -104,9 +104,19 @@ export function AppSidebar() {
       const dayStart = new Date()
       dayStart.setHours(0, 0, 0, 0)
 
-      const [todayRes, urgentRes] = await Promise.all([
+      const [traumaTodayRes, scribeTodayRes, rxTodayRes, urgentRes] = await Promise.all([
         supabase
-          .from("activity_logs")
+          .from("trauma_checks")
+          .select("id")
+          .eq("user_id", user.id)
+          .gte("created_at", dayStart.toISOString()),
+        supabase
+          .from("scribe_entries")
+          .select("id")
+          .eq("user_id", user.id)
+          .gte("created_at", dayStart.toISOString()),
+        supabase
+          .from("rx_scans")
           .select("id")
           .eq("user_id", user.id)
           .gte("created_at", dayStart.toISOString()),
@@ -117,11 +127,47 @@ export function AppSidebar() {
           .in("urgency", ["high", "critical"]),
       ])
 
-      setEntryCountToday((todayRes.data ?? []).length)
+      setEntryCountToday(
+        (traumaTodayRes.data ?? []).length +
+        (scribeTodayRes.data ?? []).length +
+        (rxTodayRes.data ?? []).length
+      )
       setUrgentQueueCount((urgentRes.data ?? []).length)
     }
 
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
+    const subscribeRealtime = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        return
+      }
+
+      channel = supabase
+        .channel(`sidebar-live-${user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "trauma_checks", filter: `user_id=eq.${user.id}` },
+          () => void loadUser()
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "scribe_entries", filter: `user_id=eq.${user.id}` },
+          () => void loadUser()
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "rx_scans", filter: `user_id=eq.${user.id}` },
+          () => void loadUser()
+        )
+        .subscribe()
+    }
+
     void loadUser()
+    void subscribeRealtime()
 
     const {
       data: { subscription },
@@ -131,8 +177,11 @@ export function AppSidebar() {
 
     return () => {
       subscription.unsubscribe()
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
     }
-  }, [supabase])
+  }, [pathname, supabase])
 
   async function handleSignOut() {
     if (!supabase) {
