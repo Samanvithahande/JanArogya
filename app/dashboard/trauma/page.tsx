@@ -156,6 +156,7 @@ const handleAnalyze = useCallback(async () => {
     const directBackendBase = directBackend.replace(/\/+$/, "")
     const candidates = [
       `${API_BASE}/predict`,
+      directBackendBase ? `${directBackendBase}/api/predict` : "",
       directBackendBase ? `${directBackendBase}/predict` : "",
     ].filter(Boolean)
 

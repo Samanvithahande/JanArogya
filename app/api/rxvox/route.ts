@@ -22,10 +22,20 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData()
 
-    const resp = await fetch(`${backendBase}/rxvox`, {
-      method: 'POST',
-      body: formData as any,
-    })
+    const endpoints = [`${backendBase}/rxvox`, `${backendBase}/api/rxvox`]
+    let resp: Response | null = null
+    for (const endpoint of endpoints) {
+      const candidate = await fetch(endpoint, {
+        method: 'POST',
+        body: formData as any,
+      })
+      resp = candidate
+      if (candidate.status !== 404) break
+    }
+
+    if (!resp) {
+      throw new Error('No backend response')
+    }
 
     const text = await resp.text()
     const contentType = resp.headers.get('content-type') || 'application/json'

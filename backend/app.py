@@ -41,14 +41,21 @@ if GEMINI_API_KEY:
 # -----------------------
 app = Flask(__name__)
 
-# Allow only known frontend origins (comma-separated) to call this backend.
+# Allow known frontend origins to call this backend.
 frontend_origins_raw = (
     os.getenv("FRONTEND_ORIGINS")
     or os.getenv("FRONTEND_ORIGIN")
     or os.getenv("NEXT_PUBLIC_FRONTEND_URL")
-    or "http://localhost:3000"
 )
-frontend_origins = [o.strip() for o in frontend_origins_raw.split(",") if o.strip()]
+
+if frontend_origins_raw:
+    frontend_origins = [o.strip() for o in frontend_origins_raw.split(",") if o.strip()]
+else:
+    frontend_origins = [
+        "http://localhost:3000",
+        "https://janarogya.vercel.app",
+    ]
+
 CORS(
     app,
     resources={r"/*": {"origins": frontend_origins}},
@@ -131,6 +138,7 @@ Return JSON only.
 # Prediction API
 # -----------------------
 @app.route("/predict", methods=["POST"])
+@app.route("/api/predict", methods=["POST"])
 def predict():
 
     if "image" not in request.files:
@@ -171,6 +179,7 @@ def predict():
         })
 
 @app.route("/rxvox", methods=["POST"])
+@app.route("/api/rxvox", methods=["POST"])
 def rxvox():
     import os
     import json
@@ -242,6 +251,7 @@ Rules:
         return jsonify({"error": "server error", "details": str(e)}), 500
 
 @app.route("/scribe", methods=["POST"])
+@app.route("/api/scribe", methods=["POST"])
 def scribe():
         import os
         import json
