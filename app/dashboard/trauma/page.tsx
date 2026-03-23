@@ -152,19 +152,44 @@ const handleAnalyze = useCallback(async () => {
     formData.append("image", file)
 
     const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api"
+    const directBackend = process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? ""
+    const directBackendBase = directBackend.replace(/\/+$/, "")
+    const candidates = [
+      `${API_BASE}/predict`,
+      directBackendBase ? `${directBackendBase}/predict` : "",
+    ].filter(Boolean)
 
-    const res = await fetch(`${API_BASE}/predict`, {
-      method: "POST",
-      body: formData,
-      mode: "cors",
-    })
+    let data: any = null
+    let lastError = ""
 
-    if (!res.ok) {
+    for (const endpoint of candidates) {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        body: formData,
+        mode: "cors",
+      })
+
+      if (res.ok) {
+        data = await res.json()
+        break
+      }
+
       const text = await res.text().catch(() => "")
-      throw new Error(`Server responded ${res.status}: ${text}`)
+      lastError = `Server responded ${res.status}: ${text}`
+
+      // Retry using direct backend URL when Next API route is missing in deployment.
+      const shouldTryNext =
+        endpoint.startsWith("/") &&
+        (res.status === 404 || res.status === 500 || res.status === 503)
+
+      if (!shouldTryNext) {
+        throw new Error(lastError)
+      }
     }
 
-    const data = await res.json()
+    if (!data) {
+      throw new Error(lastError || "Unable to reach trauma analysis service")
+    }
 
     setProgress(100)
 
