@@ -181,7 +181,7 @@ const handleAnalyze = useCallback(async () => {
       // Retry using direct backend URL when Next API route is missing in deployment.
       const shouldTryNext =
         endpoint.startsWith("/") &&
-        (res.status === 404 || res.status === 500 || res.status === 503)
+        res.status === 404
 
       if (!shouldTryNext) {
         throw new Error(lastError)
