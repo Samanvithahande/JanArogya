@@ -40,7 +40,20 @@ if GEMINI_API_KEY:
 # Flask app
 # -----------------------
 app = Flask(__name__)
-CORS(app)
+
+# Allow only known frontend origins (comma-separated) to call this backend.
+frontend_origins_raw = (
+    os.getenv("FRONTEND_ORIGINS")
+    or os.getenv("FRONTEND_ORIGIN")
+    or os.getenv("NEXT_PUBLIC_FRONTEND_URL")
+    or "http://localhost:3000"
+)
+frontend_origins = [o.strip() for o in frontend_origins_raw.split(",") if o.strip()]
+CORS(
+    app,
+    resources={r"/*": {"origins": frontend_origins}},
+    supports_credentials=True,
+)
 
 # -----------------------
 # Load YOLO model
