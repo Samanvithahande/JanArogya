@@ -6,6 +6,14 @@ function isAbsoluteHttpUrl(value: string): boolean {
   return /^https?:\/\//i.test(value.trim())
 }
 
+function normalizeHost(rawHost: string): string {
+  const first = rawHost.split(",")[0]?.trim().toLowerCase() ?? ""
+  if (!first) return ""
+
+  // Remove port when present (example: janarogya.vercel.app:443)
+  return first.replace(/:\d+$/, "")
+}
+
 const KNOWN_BACKEND_BY_FRONTEND_HOST: Record<string, string> = {
   "janarogya.vercel.app": "https://janarogya.onrender.com",
 }
@@ -15,7 +23,19 @@ function getRequestHost(request?: Request): string {
 
   const forwardedHost = request.headers.get("x-forwarded-host")
   const host = request.headers.get("host")
-  return (forwardedHost || host || "").trim().toLowerCase()
+
+  const normalized = normalizeHost(forwardedHost || host || "")
+  if (normalized) return normalized
+
+  // Fallback: derive host from Origin header when available.
+  const origin = request.headers.get("origin")
+  if (!origin) return ""
+
+  try {
+    return normalizeHost(new URL(origin).host)
+  } catch {
+    return ""
+  }
 }
 
 function inferBackendFromRequestHost(request?: Request): string {
