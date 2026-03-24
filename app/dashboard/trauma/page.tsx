@@ -168,7 +168,10 @@ const handleAnalyze = useCallback(async () => {
     }
 
     const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api"
-    const directBackend = process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? ""
+    const directBackend =
+      process.env.NEXT_PUBLIC_API_URL ??
+      process.env.NEXT_PUBLIC_BACKEND_URL ??
+      "https://janarogya.onrender.com"
     const directBackendBase = directBackend.replace(/\/+$/, "")
     const apiCandidate = `${API_BASE}/predict`
     const directCandidates = [
@@ -191,6 +194,14 @@ const handleAnalyze = useCallback(async () => {
 
           const text = await res.text().catch(() => "")
           lastError = `Server responded ${res.status}: ${text}`
+
+          const backendNotConfigured =
+            res.status === 500 &&
+            /backend url not configured/i.test(text)
+
+          if (backendNotConfigured) {
+            continue
+          }
 
           // Continue to next candidate only when the current route is missing.
           if (res.status !== 404 && res.status !== 405) {
