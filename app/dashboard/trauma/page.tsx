@@ -431,7 +431,7 @@ const handleAnalyze = useCallback(async () => {
             </Button>
           </div>
         ) : (
-          <Card className="flex items-center justify-center border-border/50 bg-card/60 backdrop-blur-sm min-h-[300px]">
+          <Card className="flex min-h-75 items-center justify-center border-border/50 bg-card/60 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3 text-center p-8">
               <div className="flex size-16 items-center justify-center rounded-2xl bg-secondary/50">
                 <Stethoscope className="size-7 text-muted-foreground" />

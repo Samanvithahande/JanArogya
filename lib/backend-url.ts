@@ -6,15 +6,47 @@ function isAbsoluteHttpUrl(value: string): boolean {
   return /^https?:\/\//i.test(value.trim())
 }
 
-export function resolveBackendBaseUrl(): string {
+const KNOWN_BACKEND_BY_FRONTEND_HOST: Record<string, string> = {
+  "janarogya.vercel.app": "https://janarogya.onrender.com",
+}
+
+function getRequestHost(request?: Request): string {
+  if (!request) return ""
+
+  const forwardedHost = request.headers.get("x-forwarded-host")
+  const host = request.headers.get("host")
+  return (forwardedHost || host || "").trim().toLowerCase()
+}
+
+function inferBackendFromRequestHost(request?: Request): string {
+  const host = getRequestHost(request)
+  if (!host) return ""
+
+  if (KNOWN_BACKEND_BY_FRONTEND_HOST[host]) {
+    return KNOWN_BACKEND_BY_FRONTEND_HOST[host]
+  }
+
+  // Vercel preview URLs for this project: janarogya-*.vercel.app
+  if (/^janarogya-[a-z0-9-]+\.vercel\.app$/i.test(host)) {
+    return "https://janarogya.onrender.com"
+  }
+
+  return ""
+}
+
+export function resolveBackendBaseUrl(request?: Request): string {
   const apiBase = process.env.NEXT_PUBLIC_API_BASE?.trim()
+  const inferredFromHost = inferBackendFromRequestHost(request)
 
   const candidates = [
     process.env.BACKEND_URL,
     process.env.API_URL,
+    process.env.BACKEND_FALLBACK_URL,
+    process.env.NEXT_PUBLIC_BACKEND_FALLBACK_URL,
     process.env.NEXT_PUBLIC_API_URL,
     process.env.NEXT_PUBLIC_BACKEND_URL,
     apiBase && isAbsoluteHttpUrl(apiBase) ? apiBase : undefined,
+    inferredFromHost,
   ]
 
   const found = candidates.find((value) => Boolean(value && value.trim()))
@@ -28,5 +60,5 @@ export function resolveBackendBaseUrl(): string {
 }
 
 export function backendEnvHelpText(): string {
-  return "Set BACKEND_URL (recommended) or NEXT_PUBLIC_API_URL to your Python backend base URL in deployment env."
+  return "Set BACKEND_URL (recommended), BACKEND_FALLBACK_URL, or NEXT_PUBLIC_API_URL to your Python backend base URL in deployment env."
 }

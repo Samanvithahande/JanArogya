@@ -18,6 +18,7 @@
 Set these in your hosting provider (for example Vercel Project Settings -> Environment Variables):
 
 - `BACKEND_URL`: Base URL of the deployed Python backend (recommended).
+- `BACKEND_FALLBACK_URL`: Optional server-side fallback backend URL used by Next API routes.
 - `NEXT_PUBLIC_API_URL`: Optional client fallback for direct backend calls.
 - `NEXT_PUBLIC_API_BASE`: Keep `/api` to use Next route handlers, or set an absolute backend URL.
 

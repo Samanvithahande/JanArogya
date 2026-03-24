@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { backendEnvHelpText, resolveBackendBaseUrl } from '@/lib/backend-url'
 
 export async function POST(request: Request) {
-  const backend = resolveBackendBaseUrl()
+  const backend = resolveBackendBaseUrl(request)
 
   if (!backend) {
     return NextResponse.json(
