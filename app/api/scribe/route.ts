@@ -1,17 +1,14 @@
 import { NextResponse } from 'next/server'
+import { backendEnvHelpText, resolveBackendBaseUrl } from '@/lib/backend-url'
 
 export async function POST(request: Request) {
-  const backend =
-    process.env.BACKEND_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
-    process.env.NEXT_PUBLIC_BACKEND_URL ??
-    (process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:5000' : '')
+  const backend = resolveBackendBaseUrl()
 
   if (!backend) {
     return NextResponse.json(
       {
         error: 'Backend URL not configured',
-        details: 'Set BACKEND_URL (recommended) or NEXT_PUBLIC_API_URL in deployment env.',
+        details: backendEnvHelpText(),
       },
       { status: 500 }
     )

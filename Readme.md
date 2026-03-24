@@ -9,8 +9,19 @@
 3. Copy `.env.example` to `.env.local` and set:
      - `NEXT_PUBLIC_SUPABASE_URL`
      - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+     - `BACKEND_URL` (required in production)
 4. In Supabase Dashboard, go to `Authentication -> Providers -> Email` and keep Email provider enabled.
 5. Start app with `npm run dev`.
+
+## Deployment Environment Variables
+
+Set these in your hosting provider (for example Vercel Project Settings -> Environment Variables):
+
+- `BACKEND_URL`: Base URL of the deployed Python backend (recommended).
+- `NEXT_PUBLIC_API_URL`: Optional client fallback for direct backend calls.
+- `NEXT_PUBLIC_API_BASE`: Keep `/api` to use Next route handlers, or set an absolute backend URL.
+
+Without a backend URL, upload-based modules (`Injury Check`, `Rx-Vox`, `Scribe`) will return a 500 error in production.
 
 Current auth behavior in this repo:
 - `Register` uses Supabase email/password sign-up and stores basic profile metadata.

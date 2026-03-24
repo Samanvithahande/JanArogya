@@ -10,4 +10,5 @@ node_modules/
 .env.*
 .envrc
 .env*.local
+!.env.example
 .DS_Store

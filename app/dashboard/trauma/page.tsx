@@ -164,27 +164,23 @@ const handleAnalyze = useCallback(async () => {
     let lastError = ""
 
     for (const endpoint of candidates) {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        body: formData,
-        mode: "cors",
-      })
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          body: formData,
+          mode: "cors",
+        })
 
-      if (res.ok) {
-        data = await res.json()
-        break
-      }
+        if (res.ok) {
+          data = await res.json()
+          break
+        }
 
-      const text = await res.text().catch(() => "")
-      lastError = `Server responded ${res.status}: ${text}`
-
-      // Retry using direct backend URL when Next API route is missing in deployment.
-      const shouldTryNext =
-        endpoint.startsWith("/") &&
-        res.status === 404
-
-      if (!shouldTryNext) {
-        throw new Error(lastError)
+        const text = await res.text().catch(() => "")
+        lastError = `Server responded ${res.status}: ${text}`
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown request error"
+        lastError = `Request to ${endpoint} failed: ${message}`
       }
     }
 
