@@ -151,6 +151,22 @@ const handleAnalyze = useCallback(async () => {
     const formData = new FormData()
     formData.append("image", file)
 
+    const fetchWithTimeout = async (endpoint: string, timeoutMs = 45000) => {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), timeoutMs)
+
+      try {
+        return await fetch(endpoint, {
+          method: "POST",
+          body: formData,
+          mode: "cors",
+          signal: controller.signal,
+        })
+      } finally {
+        clearTimeout(timer)
+      }
+    }
+
     const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api"
     const directBackend = process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? ""
     const directBackendBase = directBackend.replace(/\/+$/, "")
@@ -166,11 +182,7 @@ const handleAnalyze = useCallback(async () => {
     const runCandidates = async (endpoints: string[]) => {
       for (const endpoint of endpoints) {
         try {
-          const res = await fetch(endpoint, {
-            method: "POST",
-            body: formData,
-            mode: "cors",
-          })
+          const res = await fetchWithTimeout(endpoint)
 
           if (res.ok) {
             data = await res.json()
@@ -185,7 +197,12 @@ const handleAnalyze = useCallback(async () => {
             return
           }
         } catch (err) {
-          const message = err instanceof Error ? err.message : "Unknown request error"
+          const message =
+            err instanceof DOMException && err.name === "AbortError"
+              ? "Request timed out. Please try again."
+              : err instanceof Error
+                ? err.message
+                : "Unknown request error"
           lastError = `Request to ${endpoint} failed: ${message}`
         }
       }
@@ -200,8 +217,6 @@ const handleAnalyze = useCallback(async () => {
       throw new Error(lastError || "Unable to reach trauma analysis service")
     }
 
-    setProgress(100)
-
     const mappedResult: AnalysisResult = {
       severity: data.severity_score,
       urgency: data.urgency.toLowerCase(),
@@ -210,43 +225,51 @@ const handleAnalyze = useCallback(async () => {
       notes: data.diagnosis || "No diagnosis available"
     }
 
-    const uploaded = await uploadFileForUser(supabase, "trauma-images", user.id, file)
-
-    const insertRes = await supabase.from("trauma_checks").insert({
-      user_id: user.id,
-      image_path: uploaded.path,
-      image_url: uploaded.publicUrl,
-      severity: mappedResult.severity,
-      urgency: mappedResult.urgency,
-      actions: mappedResult.actions,
-      equipment: mappedResult.equipment,
-      diagnosis: mappedResult.notes,
-    }).select("id").single()
-
-    const insertedId = insertRes.data?.id as string | undefined
-
-    await createActivityLog(supabase, {
-      userId: user.id,
-      module: "trauma",
-      action: "Injury safety check completed",
-      metadata: {
-        severity: mappedResult.severity,
-        urgency: mappedResult.urgency,
-      },
-    })
-
-    if (mappedResult.urgency === "high" || mappedResult.urgency === "critical") {
-      await createNotification(supabase, {
-        userId: user.id,
-        title: "Urgent Injury Alert",
-        message: `Severity ${mappedResult.severity}/10 requires quick attention.`,
-        kind: "urgent",
-        relatedTable: "trauma_checks",
-        relatedId: insertedId,
-      })
-    }
-
+    setProgress(100)
     setResult(mappedResult)
+
+    // Persist analysis in background so UI doesn't remain in loading state on DB/storage delays.
+    void (async () => {
+      try {
+        const uploaded = await uploadFileForUser(supabase, "trauma-images", user.id, file)
+
+        const insertRes = await supabase.from("trauma_checks").insert({
+          user_id: user.id,
+          image_path: uploaded.path,
+          image_url: uploaded.publicUrl,
+          severity: mappedResult.severity,
+          urgency: mappedResult.urgency,
+          actions: mappedResult.actions,
+          equipment: mappedResult.equipment,
+          diagnosis: mappedResult.notes,
+        }).select("id").single()
+
+        const insertedId = insertRes.data?.id as string | undefined
+
+        await createActivityLog(supabase, {
+          userId: user.id,
+          module: "trauma",
+          action: "Injury safety check completed",
+          metadata: {
+            severity: mappedResult.severity,
+            urgency: mappedResult.urgency,
+          },
+        })
+
+        if (mappedResult.urgency === "high" || mappedResult.urgency === "critical") {
+          await createNotification(supabase, {
+            userId: user.id,
+            title: "Urgent Injury Alert",
+            message: `Severity ${mappedResult.severity}/10 requires quick attention.`,
+            kind: "urgent",
+            relatedTable: "trauma_checks",
+            relatedId: insertedId,
+          })
+        }
+      } catch (persistError) {
+        console.error("Failed to persist trauma analysis:", persistError)
+      }
+    })()
 
   } catch (error) {
     console.error("Analysis failed:", error)
