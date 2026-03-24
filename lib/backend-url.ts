@@ -18,6 +18,8 @@ const KNOWN_BACKEND_BY_FRONTEND_HOST: Record<string, string> = {
   "janarogya.vercel.app": "https://janarogya.onrender.com",
 }
 
+const DEFAULT_PROD_BACKEND_URL = "https://janarogya.onrender.com"
+
 function getRequestHost(request?: Request): string {
   if (!request) return ""
 
@@ -29,10 +31,16 @@ function getRequestHost(request?: Request): string {
 
   // Fallback: derive host from Origin header when available.
   const origin = request.headers.get("origin")
-  if (!origin) return ""
+  if (origin) {
+    try {
+      return normalizeHost(new URL(origin).host)
+    } catch {
+      // fall through to request.url parsing
+    }
+  }
 
   try {
-    return normalizeHost(new URL(origin).host)
+    return normalizeHost(new URL(request.url).host)
   } catch {
     return ""
   }
@@ -76,7 +84,7 @@ export function resolveBackendBaseUrl(request?: Request): string {
     return "http://127.0.0.1:5000"
   }
 
-  return ""
+  return DEFAULT_PROD_BACKEND_URL
 }
 
 export function backendEnvHelpText(): string {
