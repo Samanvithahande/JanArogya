@@ -21,6 +21,10 @@ Set these in your hosting provider (for example Vercel Project Settings -> Envir
 - `NEXT_PUBLIC_API_URL`: Optional client fallback for direct backend calls.
 - `NEXT_PUBLIC_API_BASE`: Keep `/api` to use Next route handlers, or set an absolute backend URL.
 
+Set this in your Python backend host (for example Render Environment):
+
+- `FRONTEND_ORIGINS`: Comma-separated allowed origins, for example `https://janarogya.vercel.app,https://<preview>.vercel.app`
+
 Without a backend URL, upload-based modules (`Injury Check`, `Rx-Vox`, `Scribe`) will return a 500 error in production.
 
 Current auth behavior in this repo:

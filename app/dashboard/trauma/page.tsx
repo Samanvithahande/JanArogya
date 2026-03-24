@@ -154,8 +154,8 @@ const handleAnalyze = useCallback(async () => {
     const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api"
     const directBackend = process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? ""
     const directBackendBase = directBackend.replace(/\/+$/, "")
-    const candidates = [
-      `${API_BASE}/predict`,
+    const apiCandidate = `${API_BASE}/predict`
+    const directCandidates = [
       directBackendBase ? `${directBackendBase}/api/predict` : "",
       directBackendBase ? `${directBackendBase}/predict` : "",
     ].filter(Boolean)
@@ -163,25 +163,37 @@ const handleAnalyze = useCallback(async () => {
     let data: any = null
     let lastError = ""
 
-    for (const endpoint of candidates) {
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          body: formData,
-          mode: "cors",
-        })
+    const runCandidates = async (endpoints: string[]) => {
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint, {
+            method: "POST",
+            body: formData,
+            mode: "cors",
+          })
 
-        if (res.ok) {
-          data = await res.json()
-          break
+          if (res.ok) {
+            data = await res.json()
+            return
+          }
+
+          const text = await res.text().catch(() => "")
+          lastError = `Server responded ${res.status}: ${text}`
+
+          // Continue to next candidate only when the current route is missing.
+          if (res.status !== 404 && res.status !== 405) {
+            return
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Unknown request error"
+          lastError = `Request to ${endpoint} failed: ${message}`
         }
-
-        const text = await res.text().catch(() => "")
-        lastError = `Server responded ${res.status}: ${text}`
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown request error"
-        lastError = `Request to ${endpoint} failed: ${message}`
       }
+    }
+
+    await runCandidates([apiCandidate])
+    if (!data && directCandidates.length > 0 && /Server responded (404|405):/.test(lastError)) {
+      await runCandidates(directCandidates)
     }
 
     if (!data) {

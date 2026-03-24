@@ -5,6 +5,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 import json
+import re
 
 # -----------------------
 # Load environment vars
@@ -49,18 +50,42 @@ frontend_origins_raw = (
 )
 
 if frontend_origins_raw:
-    frontend_origins = [o.strip() for o in frontend_origins_raw.split(",") if o.strip()]
+    frontend_origins = [o.strip().rstrip("/") for o in frontend_origins_raw.split(",") if o.strip()]
 else:
     frontend_origins = [
         "http://localhost:3000",
         "https://janarogya.vercel.app",
     ]
 
+explicit_frontend_origins = set(frontend_origins)
+
+def is_allowed_origin(origin: str | None) -> bool:
+    if not origin:
+        return False
+
+    normalized = origin.strip().rstrip("/")
+    if normalized in explicit_frontend_origins:
+        return True
+
+    # Allow Vercel production + preview deployments.
+    return bool(re.match(r"^https://[a-zA-Z0-9-]+\.vercel\.app$", normalized))
+
 CORS(
     app,
-    resources={r"/*": {"origins": frontend_origins}},
+    resources={r"/*": {"origins": frontend_origins + [r"https://[a-zA-Z0-9-]+\.vercel\.app"]}},
     supports_credentials=True,
 )
+
+@app.after_request
+def add_cors_headers(response):
+    origin = request.headers.get("Origin")
+    if is_allowed_origin(origin):
+        response.headers["Access-Control-Allow-Origin"] = origin.strip().rstrip("/")
+        response.headers["Vary"] = "Origin"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+    return response
 
 # -----------------------
 # Load YOLO model
@@ -140,34 +165,32 @@ Return JSON only.
 @app.route("/predict", methods=["POST"])
 @app.route("/api/predict", methods=["POST"])
 def predict():
+    try:
+        if "image" not in request.files:
+            return jsonify({"error": "No image uploaded"}), 400
 
-    if "image" not in request.files:
-        return jsonify({"error": "No image uploaded"}), 400
+        file = request.files["image"]
 
-    file = request.files["image"]
+        filepath = "temp.jpg"
+        file.save(filepath)
 
-    filepath = "temp.jpg"
-    file.save(filepath)
+        results = model(filepath)
 
-    results = model(filepath)
+        boxes = results[0].boxes.xyxy.tolist()
+        confidence = results[0].boxes.conf.tolist()
 
-    boxes = results[0].boxes.xyxy.tolist()
-    confidence = results[0].boxes.conf.tolist()
+        if len(confidence) > 0:
+            triage = get_triage_from_llm(
+                confidence[0],
+                boxes[0]
+            )
 
-    if len(confidence) > 0:
+            return jsonify({
+                "boxes": boxes,
+                "confidence": confidence,
+                **triage
+            })
 
-        triage = get_triage_from_llm(
-            confidence[0],
-            boxes[0]
-        )
-
-        return jsonify({
-            "boxes": boxes,
-            "confidence": confidence,
-            **triage
-        })
-
-    else:
         return jsonify({
             "boxes": [],
             "confidence": [],
@@ -177,6 +200,9 @@ def predict():
             "actions": [],
             "equipment": []
         })
+    except Exception as e:
+        print("predict handler failed:", e)
+        return jsonify({"error": "Prediction failed", "details": str(e)}), 500
 
 @app.route("/rxvox", methods=["POST"])
 @app.route("/api/rxvox", methods=["POST"])
